@@ -58,23 +58,35 @@
           <i class="fa-solid fa-utensils"></i>
         </div>
         <div>
-          <h1 class="text-lg font-bold tracking-wider">ChefCost AI <span class="text-xs bg-amber-500/20 text-amber-400 border border-amber-400/30 px-2 py-0.5 rounded ml-2">PRO</span></h1>
+          <h1 class="text-lg font-bold tracking-wider flex items-center">
+            ChefCost AI
+            <span class="text-xs bg-amber-500/20 text-amber-400 border border-amber-400/30 px-2 py-0.5 rounded ml-2">PRO</span>
+            <span id="save-status-badge" class="text-[11px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded ml-2 font-normal">
+              <i class="fa-solid fa-check mr-1"></i>端末自動保存ON
+            </span>
+          </h1>
           <p class="text-xs text-slate-400">歩留まり・仕込み連動・A4ワンページ印刷対応 レシピ原価管理</p>
         </div>
       </div>
 
-      <!-- Navigation Tabs -->
-      <nav class="flex flex-wrap gap-1 bg-slate-800 p-1 rounded-lg text-sm">
-        <button onclick="switchTab('recipe')" id="tab-recipe" class="px-3.5 py-2 rounded-md font-medium bg-amber-500 text-slate-900 transition">
-          <i class="fa-solid fa-camera mr-1"></i> レシピ作成
+      <!-- Navigation Tabs & Settings -->
+      <div class="flex flex-wrap items-center gap-2">
+        <nav class="flex flex-wrap gap-1 bg-slate-800 p-1 rounded-lg text-sm">
+          <button onclick="switchTab('recipe')" id="tab-recipe" class="px-3.5 py-2 rounded-md font-medium bg-amber-500 text-slate-900 transition">
+            <i class="fa-solid fa-camera mr-1"></i> レシピ作成
+          </button>
+          <button onclick="switchTab('ingredients')" id="tab-ingredients" class="px-3.5 py-2 rounded-md font-medium text-slate-300 hover:text-white transition">
+            <i class="fa-solid fa-boxes-stacked mr-1"></i> 食材データベース
+          </button>
+          <button onclick="switchTab('saved')" id="tab-saved" class="px-3.5 py-2 rounded-md font-medium text-slate-300 hover:text-white transition">
+            <i class="fa-solid fa-book-open mr-1"></i> 保存済みレシピ帳 (<span id="saved-count">3</span>)
+          </button>
+        </nav>
+
+        <button onclick="openSettingsModal()" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 flex items-center transition">
+          <i class="fa-solid fa-shield-halved text-amber-400 mr-1.5"></i> データ管理・API設定
         </button>
-        <button onclick="switchTab('ingredients')" id="tab-ingredients" class="px-3.5 py-2 rounded-md font-medium text-slate-300 hover:text-white transition">
-          <i class="fa-solid fa-boxes-stacked mr-1"></i> 食材データベース
-        </button>
-        <button onclick="switchTab('saved')" id="tab-saved" class="px-3.5 py-2 rounded-md font-medium text-slate-300 hover:text-white transition">
-          <i class="fa-solid fa-book-open mr-1"></i> 保存済みレシピ帳 (<span id="saved-count">3</span>)
-        </button>
-      </nav>
+      </div>
     </div>
   </header>
 
@@ -105,7 +117,7 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        <!-- 左カラム：STEP 1 写真選択（iPhone/iPad完全対応）＆手順入力 -->
+        <!-- 左カラム：STEP 1 写真選択（自動軽量化対応）＆手順入力 -->
         <div class="lg:col-span-4 space-y-6">
           <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
             <h2 class="text-base font-bold flex items-center text-slate-800 mb-3">
@@ -119,17 +131,27 @@
               <div id="photo-placeholder" class="py-4">
                 <i class="fa-solid fa-images text-3xl text-slate-400 mb-2"></i>
                 <p class="text-sm font-bold text-slate-700">完成図の写真を選択</p>
-                <p class="text-xs text-slate-400 mt-1 mb-3">iPhone・タブレットの写真フォルダやカメラに対応</p>
+                <p class="text-xs text-slate-400 mt-1 mb-3">自動で高画質のまま軽量化（横幅800px）して保存します</p>
                 <label for="photo-input" class="inline-flex items-center px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-xs rounded-lg shadow-sm cursor-pointer transition">
                   <i class="fa-solid fa-folder-open mr-1.5"></i> 写真フォルダ・カメラから選ぶ
                 </label>
               </div>
 
-              <div id="photo-preview-wrap" class="hidden space-y-3">
-                <img id="photo-preview" src="" alt="料理プレビュー" class="w-full h-44 object-cover rounded-lg shadow-sm mx-auto">
-                <label for="photo-input" class="inline-flex items-center px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-lg cursor-pointer transition">
-                  <i class="fa-solid fa-rotate mr-1.5"></i> 別の写真を選び直す
-                </label>
+              <div id="photo-preview-wrap" class="hidden space-y-2.5">
+                <div class="relative">
+                  <img id="photo-preview" src="" alt="料理プレビュー" class="w-full h-44 object-cover rounded-lg shadow-sm mx-auto">
+                  <span id="photo-size-badge" class="hidden absolute bottom-2 right-2 bg-slate-900/80 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-sm">
+                    軽量化済
+                  </span>
+                </div>
+                <div class="flex flex-wrap justify-center gap-2 pt-1">
+                  <label for="photo-input" class="inline-flex items-center px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-lg cursor-pointer transition">
+                    <i class="fa-solid fa-rotate mr-1.5"></i> 写真を選び直す
+                  </label>
+                  <button onclick="analyzePhotoWithAI()" id="btn-ai-photo" class="inline-flex items-center px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-xs rounded-lg shadow-sm transition">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i> AIで写真から食材を抽出
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -288,10 +310,10 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 2: 店舗登録済み 食材データベース (フルワイド100%幅) ==================== -->
+    <!-- ==================== TAB 2: 店舗登録済み 食材データベース (フルワイド＋ワンクリック削除対応) ==================== -->
     <section id="view-ingredients" class="hidden space-y-6">
       
-      <!-- 上段：卸サイトの取引ページを貼り付けて一括登録（横幅いっぱい・すっきり配置） -->
+      <!-- 上段：卸サイトの取引ページを貼り付けて一括登録 -->
       <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
         <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
           <div class="flex items-center space-x-2">
@@ -314,19 +336,19 @@
             <textarea id="supplier-raw-text" rows="3" placeholder="ここに卸サイトの取引履歴テキストを貼り付けてください...（例：ノルウェー産 サーモン 1.2kg 3,840円 / 生クリーム 1000ml 1,420円）" class="w-full h-full text-xs border border-slate-300 rounded-lg p-3 focus:outline-none focus:border-amber-500 font-mono bg-slate-50"></textarea>
           </div>
           <div class="lg:col-span-3 flex">
-            <button onclick="parseSupplierText()" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-sm rounded-lg shadow-sm transition flex items-center justify-center">
+            <button onclick="parseSupplierText()" id="btn-parse-supplier" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-sm rounded-lg shadow-sm transition flex items-center justify-center">
               <i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i> AI解析して一括追加
             </button>
           </div>
         </div>
       </div>
 
-      <!-- 下段：店舗登録済み 食材データベース一覧（画面横幅100%で実質単価まで余裕で表示） -->
+      <!-- 下段：店舗登録済み 食材データベース一覧 -->
       <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-5">
         <div class="flex flex-wrap justify-between items-center gap-4 pb-4 border-b border-slate-200">
           <div>
             <h2 class="text-lg font-bold text-slate-800">店舗登録済み 食材データベース一覧 (<span id="master-count">0</span>品目)</h2>
-            <p class="text-xs text-slate-500 mt-0.5">食材名・カテゴリー・仕入企業・規格容量・単位（g / ml / pc / 本 または自由入力）・価格・歩留まりを直接クリックして修正できます</p>
+            <p class="text-xs text-slate-500 mt-0.5">各項目は直接クリックして書き換え修正でき、右端のゴミ箱ボタンでワンクリック削除できます</p>
           </div>
 
           <!-- 表示方法の切り替えボタン -->
@@ -379,7 +401,7 @@
           </button>
         </div>
 
-        <!-- データベーステーブル描画領域（フルワイドで見切れ防止） -->
+        <!-- データベーステーブル描画領域 -->
         <div id="master-db-container" class="space-y-6">
           <!-- JSでグループ別または全件テーブルを描画 -->
         </div>
@@ -454,7 +476,7 @@
     <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200">
       
       <!-- モーダルヘッダー -->
-      <div class="sticky top-0 bg-slate-900 text-white px-6 py-4 flex justify-between items-center z-10">
+      <div class="sticky top-0 bg-slate-900 text-white px-6 py-4 flex flex-wrap justify-between items-center gap-2 z-10">
         <div class="flex items-center space-x-2">
           <span id="modal-recipe-badge" class="text-xs font-bold px-2.5 py-0.5 rounded bg-amber-500 text-slate-900">グランドメニュー</span>
           <h3 id="modal-recipe-title" class="text-lg font-bold">レシピ詳細</h3>
@@ -465,6 +487,9 @@
           </button>
           <button onclick="loadSavedIntoEditor()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs rounded-lg transition">
             <i class="fa-solid fa-pen-to-square mr-1"></i> 編集画面で開く
+          </button>
+          <button onclick="deleteSavedRecipe()" class="px-3 py-2 bg-rose-600/80 hover:bg-rose-600 text-white font-bold text-xs rounded-lg transition" title="このレシピを削除">
+            <i class="fa-solid fa-trash-can"></i>
           </button>
           <button onclick="closeRecipeModal()" class="text-slate-400 hover:text-white text-xl px-2">
             <i class="fa-solid fa-xmark"></i>
@@ -479,14 +504,77 @@
     </div>
   </div>
 
+  <!-- ==================== データ保存・バックアップ・Gemini API設定モーダル ==================== -->
+  <div id="settings-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4 overflow-y-auto no-print">
+    <div class="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl border border-slate-200">
+      <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-shield-halved text-amber-400"></i>
+          <h3 class="text-base font-bold">データ管理・バックアップ・Gemini API連携設定</h3>
+        </div>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white text-xl px-2">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-6 text-sm">
+        
+        <!-- 1. Gemini APIキー設定 -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="font-bold text-slate-800 flex items-center">
+              <i class="fa-solid fa-key text-amber-500 mr-2"></i>1. Gemini APIキー設定（AI自動解析の有効化）
+            </h4>
+            <span id="api-key-status" class="text-xs font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-600">未設定（デモモード）</span>
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            APIキーを入力すると、実際の料理写真からの食材ピックアップや、卸サイト文字の高精度AI解析が動作します。キーはこのブラウザ内部（LocalStorage）にのみ保存され、GitHub等の外部コードには一切公開されません。
+          </p>
+          <div class="flex gap-2">
+            <input type="password" id="gemini-api-key-input" placeholder="AIzaSy... から始まるGemini APIキーを入力" class="flex-1 text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white font-mono focus:outline-none focus:border-amber-500">
+            <button onclick="saveApiKey()" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-xs rounded-lg transition whitespace-nowrap">
+              キーを保存
+            </button>
+            <button onclick="clearApiKey()" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-lg transition whitespace-nowrap">
+              消去
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. データのファイル書き出し・別端末への移行 -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+          <h4 class="font-bold text-slate-800 flex items-center">
+            <i class="fa-solid fa-file-export text-indigo-600 mr-2"></i>2. データのバックアップ書き出し・別端末への復元
+          </h4>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            現在登録されている「全食材データベース」と「保存済みレシピ帳」をJSONファイルとしてダウンロードできます。LINEやメールでスタッフに送って読み込ませることで簡単に共有できます。
+          </p>
+          <div class="flex flex-wrap gap-3 pt-1">
+            <button onclick="exportBackupJson()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition">
+              <i class="fa-solid fa-download mr-1.5"></i> バックアップファイルを保存 (.json)
+            </button>
+            <label class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition cursor-pointer">
+              <i class="fa-solid fa-upload mr-1.5"></i> バックアップファイルを読み込む
+              <input type="file" accept=".json" class="hidden" onchange="importBackupJson(event)">
+            </label>
+            <button onclick="resetToDefaultData()" class="px-3 py-2 border border-rose-300 text-rose-600 hover:bg-rose-50 font-bold text-xs rounded-lg transition ml-auto">
+              初期サンプルデータに戻す
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <!-- ==================== A4・1ページ専用 印刷シート（印刷時のみ表示） ==================== -->
   <div id="print-sheet" class="hidden p-4">
     <!-- JSで選択したレシピをA4・1枚に凝縮して描画 -->
   </div>
 
   <script>
-    // ====== 1. 初期データ（g, ml, pc, 本 + 自由単位に対応） ======
-    let ingredientsMaster = [
+    // ====== 1. 初期サンプルデータ定義 ======
+    const DEFAULT_INGREDIENTS = [
       { id: 'ing-1', name: 'ディチェコ スパゲッティ 1.6mm', category: '乾物・麺・粉', supplier: 'フーズネット卸', packageGrams: 5000, unit: 'g', packagePrice: 3100, yieldRate: 100 },
       { id: 'ing-2', name: '合挽きミンチ（牛7:豚3）', category: '肉類', supplier: 'ミートプロ業務用', packageGrams: 1000, unit: 'g', packagePrice: 1480, yieldRate: 95 },
       { id: 'ing-3', name: '北海道産 玉ねぎ（皮つき）', category: '野菜・果実', supplier: 'ベジタブルファーム', packageGrams: 10000, unit: 'g', packagePrice: 2200, yieldRate: 88 },
@@ -500,35 +588,7 @@
       { id: 'prep-1', name: '【自家製仕込】特製ミートソース', category: '仕込み品', supplier: '自店仕込み', packageGrams: 2000, unit: 'g', packagePrice: 2160, yieldRate: 100 }
     ];
 
-    const categoryList = ['肉類', '魚介類', '野菜・果実', '乳製品・卵', '乾物・麺・粉', '調味料・油', '仕込み品'];
-    let dbViewMode = 'all'; // 'all' | 'category' | 'supplier'
-    let savedFilterMode = 'all'; // 'all' | 'menu' | 'prep'
-    let activeModalRecipeId = null;
-
-    // 現在編集中のレシピ状態
-    let currentRecipe = {
-      type: 'menu',
-      name: '特製ボロネーゼ パスタ',
-      photoUrl: 'https://images.unsplash.com/photo-1621996346565-e3d5d6281298?auto=format&fit=crop&w=600&q=80',
-      finishedWeight: 320,
-      finishedUnit: 'g',
-      sellingPrice: 1280,
-      items: [
-        { ingId: 'ing-1', usedGrams: 100, customYield: 100 },
-        { ingId: 'prep-1', usedGrams: 160, customYield: 100 },
-        { ingId: 'ing-6', usedGrams: 15, customYield: 100 },
-        { ingId: 'ing-7', usedGrams: 12, customYield: 100 }
-      ],
-      steps: [
-        '塩分濃度1%の沸騰したお湯でスパゲッティを規定時間より1分短く茹でる。',
-        'フライパンにオリーブ油15mlと自家製ミートソース160gを入れて中火で温める。',
-        '茹で上がった麺と茹で汁大さじ2を加え、強火で乳化させながら30秒絡める。',
-        '温めた深皿の中央に高く盛り付け、仕上げにグラナパダーノを全体に削りかける。'
-      ]
-    };
-
-    // 保存済みレシピ帳データ
-    let savedRecipes = [
+    const DEFAULT_SAVED_RECIPES = [
       {
         id: 'rec-101',
         type: 'prep',
@@ -600,7 +660,63 @@
       }
     ];
 
-    // ====== 2. 計算ユーティリティ ======
+    const STORAGE_KEY_ING = 'chefcost_ingredients_v1';
+    const STORAGE_KEY_REC = 'chefcost_recipes_v1';
+    const STORAGE_KEY_API = 'chefcost_gemini_api_key';
+
+    let ingredientsMaster = [];
+    let savedRecipes = [];
+
+    const categoryList = ['肉類', '魚介類', '野菜・果実', '乳製品・卵', '乾物・麺・粉', '調味料・油', '仕込み品'];
+    let dbViewMode = 'all';
+    let savedFilterMode = 'all';
+    let activeModalRecipeId = null;
+
+    let currentRecipe = {
+      type: 'menu',
+      name: '特製ボロネーゼ パスタ',
+      photoUrl: 'https://images.unsplash.com/photo-1621996346565-e3d5d6281298?auto=format&fit=crop&w=600&q=80',
+      finishedWeight: 320,
+      finishedUnit: 'g',
+      sellingPrice: 1280,
+      items: [
+        { ingId: 'ing-1', usedGrams: 100, customYield: 100 },
+        { ingId: 'prep-1', usedGrams: 160, customYield: 100 },
+        { ingId: 'ing-6', usedGrams: 15, customYield: 100 },
+        { ingId: 'ing-7', usedGrams: 12, customYield: 100 }
+      ],
+      steps: [
+        '塩分濃度1%の沸騰したお湯でスパゲッティを規定時間より1分短く茹でる。',
+        'フライパンにオリーブ油15mlと自家製ミートソース160gを入れて中火で温める。',
+        '茹で上がった麺と茹で汁大さじ2を加え、強火で乳化させながら30秒絡める。',
+        '温めた深皿の中央に高く盛り付け、仕上げにグラナパダーノを全体に削りかける。'
+      ]
+    };
+
+    // ====== 2. LocalStorage自動保存＆読み込み処理 ======
+    function loadFromStorage() {
+      try {
+        const rawIng = localStorage.getItem(STORAGE_KEY_ING);
+        const rawRec = localStorage.getItem(STORAGE_KEY_REC);
+        ingredientsMaster = rawIng ? JSON.parse(rawIng) : JSON.parse(JSON.stringify(DEFAULT_INGREDIENTS));
+        savedRecipes = rawRec ? JSON.parse(rawRec) : JSON.parse(JSON.stringify(DEFAULT_SAVED_RECIPES));
+      } catch (e) {
+        ingredientsMaster = JSON.parse(JSON.stringify(DEFAULT_INGREDIENTS));
+        savedRecipes = JSON.parse(JSON.stringify(DEFAULT_SAVED_RECIPES));
+      }
+      updateApiKeyBadge();
+    }
+
+    function saveToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY_ING, JSON.stringify(ingredientsMaster));
+        localStorage.setItem(STORAGE_KEY_REC, JSON.stringify(savedRecipes));
+      } catch (e) {
+        console.warn('LocalStorage保存エラー:', e);
+      }
+    }
+
+    // ====== 3. 計算ユーティリティ ======
     function getUnitLabel(ing) {
       const u = (ing.unit || '').trim();
       return u.length > 0 ? u : 'g';
@@ -616,8 +732,9 @@
       return base / (validYield / 100);
     }
 
-    // ====== 3. 初期化＆タブ切り替え ======
+    // ====== 4. 初期化＆タブ切り替え ======
     function initApp() {
+      loadFromStorage();
       renderMasterDatabase();
       renderIngredientSelect();
       renderRecipeTable();
@@ -637,7 +754,7 @@
       });
     }
 
-    // ====== 4. レシピ作成＆番号付き調理手順エディタ ======
+    // ====== 5. レシピ作成＆番号付き調理手順エディタ ======
     function changeRecipeType(type) {
       currentRecipe.type = type;
       const isPrep = type === 'prep';
@@ -814,24 +931,148 @@
       }
     }
 
-    function handleImageUpload(event) {
+    // ====== 写真の自動軽量化（最大横幅800px・JPEG品質0.8圧縮） ======
+    function compressImageFile(file, maxWidth = 800, quality = 0.8) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = new Image();
+          img.onload = function() {
+            let width = img.width;
+            let height = img.height;
+
+            // 横幅が800pxを超える場合は縦横比を維持して縮小
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+
+            // 透過PNG対策として白背景を敷いてから描画
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+            resolve(compressedDataUrl);
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handleImageUpload(event) {
       const file = event.target.files && event.target.files[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        currentRecipe.photoUrl = e.target.result;
-        document.getElementById('photo-preview').src = e.target.result;
+
+      try {
+        const compressedDataUrl = await compressImageFile(file, 800, 0.8);
+        currentRecipe.photoUrl = compressedDataUrl;
+
+        // 圧縮後の概算KBサイズを計算してバッジ表示
+        const approxKb = Math.round((compressedDataUrl.length * 3) / 4 / 1024);
+        const sizeBadge = document.getElementById('photo-size-badge');
+        if (sizeBadge) {
+          sizeBadge.textContent = `自動軽量化済 (約${approxKb}KB)`;
+          sizeBadge.classList.remove('hidden');
+        }
+
+        document.getElementById('photo-preview').src = compressedDataUrl;
         document.getElementById('photo-placeholder').classList.add('hidden');
         document.getElementById('photo-preview-wrap').classList.remove('hidden');
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        alert('画像の読み込みに失敗しました。別の画像をお試しください。');
+      }
+    }
+
+    // Gemini APIによる料理写真からの食材自動ピックアップ
+    async function analyzePhotoWithAI() {
+      const apiKey = localStorage.getItem(STORAGE_KEY_API);
+      if (!apiKey) {
+        alert('実際の料理写真をAI解析するには、画面右上の「データ管理・API設定」からGemini APIキーを登録してください。\n（現在はサンプルレシピを反映します）');
+        loadPresetRecipe('bolognese');
+        return;
+      }
+
+      if (!currentRecipe.photoUrl || !currentRecipe.photoUrl.startsWith('data:image')) {
+        alert('まずスマホやPCから料理の写真を選択してください。');
+        return;
+      }
+
+      const btn = document.getElementById('btn-ai-photo');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> AI解析中...';
+      btn.disabled = true;
+
+      try {
+        const mimeType = currentRecipe.photoUrl.split(';')[0].split(':')[1];
+        const base64Data = currentRecipe.photoUrl.split(',')[1];
+        const masterListText = ingredientsMaster.map(m => `ID:${m.id} | 名称:${m.name} | 単位:${m.unit || 'g'}`).join('\n');
+
+        const prompt = `あなたはプロの料理長です。添付された料理の写真を見て、以下の「店舗登録済み食材リスト」の中から使われている可能性が高い食材を選び出し、1人前の推定使用量と調理手順をJSON形式のみで出力してください。
+【店舗登録済み食材リスト】
+${masterListText}
+
+出力JSON形式:
+{
+  "dishName": "推定される料理名",
+  "finishedWeight": 300,
+  "items": [{"ingId": "リスト内のID", "usedGrams": 100}],
+  "steps": ["手順1", "手順2", "手順3"]
+}`;
+
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: prompt },
+                { inline_data: { mime_type: mimeType, data: base64Data } }
+              ]
+            }],
+            generationConfig: { responseMimeType: "application/json" }
+          })
+        });
+
+        const data = await res.json();
+        const jsonText = data.candidates[0].content.parts[0].text;
+        const parsed = JSON.parse(jsonText);
+
+        if (parsed.dishName) document.getElementById('recipe-name').value = parsed.dishName;
+        if (parsed.finishedWeight) document.getElementById('finished-weight').value = parsed.finishedWeight;
+        if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+          currentRecipe.items = parsed.items.filter(it => ingredientsMaster.some(m => m.id === it.ingId)).map(it => {
+            const ing = ingredientsMaster.find(m => m.id === it.ingId);
+            return { ingId: it.ingId, usedGrams: Number(it.usedGrams) || 50, customYield: ing ? ing.yieldRate : 100 };
+          });
+        }
+        if (Array.isArray(parsed.steps) && parsed.steps.length > 0) {
+          currentRecipe.steps = parsed.steps;
+        }
+
+        renderRecipeTable();
+        renderStepsEditor();
+      } catch (err) {
+        alert('AI解析中にエラーが発生しました。APIキーや通信状況をご確認ください。');
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
     }
 
     function loadPresetRecipe(presetKey) {
       const recMap = {
-        'bolognese': savedRecipes[1],
-        'meat_sauce_prep': savedRecipes[0],
-        'roast_beef': savedRecipes[2]
+        'bolognese': DEFAULT_SAVED_RECIPES[1],
+        'meat_sauce_prep': DEFAULT_SAVED_RECIPES[0],
+        'roast_beef': DEFAULT_SAVED_RECIPES[2]
       };
       const target = recMap[presetKey];
       if (!target) return;
@@ -847,6 +1088,7 @@
       currentRecipe.steps = [...target.steps];
 
       document.getElementById('photo-preview').src = target.photoUrl;
+      document.getElementById('photo-size-badge').classList.add('hidden');
       document.getElementById('photo-placeholder').classList.add('hidden');
       document.getElementById('photo-preview-wrap').classList.remove('hidden');
 
@@ -903,11 +1145,12 @@
         renderIngredientSelect();
       }
 
+      saveToStorage();
       renderSavedRecipes();
       switchTab('saved');
     }
 
-    // ====== 5. 食材データベース管理（フルワイド対応・見切れ防止レイアウト） ======
+    // ====== 6. 食材データベース管理（ワンクリック削除対応） ======
     function setDbViewMode(mode) {
       dbViewMode = mode;
       ['all', 'category', 'supplier'].forEach(m => {
@@ -974,7 +1217,7 @@
               <td class="py-2.5 px-3">
                 <input type="text" value="${ing.name}"
                   onchange="updateMasterField(${idx}, 'name', this.value)"
-                  class="w-full min-w-[220px] font-bold text-slate-800 border border-transparent hover:border-slate-300 focus:border-amber-500 rounded px-2 py-1 bg-transparent focus:bg-white focus:outline-none">
+                  class="w-full min-w-[200px] font-bold text-slate-800 border border-transparent hover:border-slate-300 focus:border-amber-500 rounded px-2 py-1 bg-transparent focus:bg-white focus:outline-none">
               </td>
               <td class="py-2.5 px-3 whitespace-nowrap w-36">
                 <select onchange="updateMasterField(${idx}, 'category', this.value)"
@@ -982,12 +1225,11 @@
                   ${catOptions}
                 </select>
               </td>
-              <td class="py-2.5 px-3 whitespace-nowrap w-44">
+              <td class="py-2.5 px-3 whitespace-nowrap w-40">
                 <input type="text" value="${ing.supplier || ''}"
                   onchange="updateMasterField(${idx}, 'supplier', this.value)"
                   class="w-full text-xs text-slate-600 border border-transparent hover:border-slate-300 focus:border-amber-500 rounded px-2 py-1 bg-transparent focus:bg-white focus:outline-none">
               </td>
-              <!-- 規格容量 (数値と単位[選択+自由入力]を真横に固定) -->
               <td class="py-2.5 px-3 text-right whitespace-nowrap w-44">
                 <div class="inline-flex items-center justify-end border border-slate-200 rounded px-2 py-1 bg-white whitespace-nowrap focus-within:border-amber-500">
                   <input type="number" value="${ing.packageGrams}" min="0.01" step="any"
@@ -999,7 +1241,6 @@
                     class="w-12 ml-1.5 pl-1.5 border-l border-slate-200 text-center text-xs font-bold text-slate-700 bg-transparent focus:outline-none">
                 </div>
               </td>
-              <!-- 仕入価格 (¥と数値を真横に固定) -->
               <td class="py-2.5 px-3 text-right whitespace-nowrap w-36">
                 <div class="inline-flex items-center justify-end border border-slate-200 rounded px-2 py-1 bg-white whitespace-nowrap focus-within:border-amber-500">
                   <span class="text-slate-500 font-mono mr-1">¥</span>
@@ -1008,7 +1249,6 @@
                     class="w-20 text-right font-mono focus:outline-none">
                 </div>
               </td>
-              <!-- 歩留まり (数値と%を真横に固定) -->
               <td class="py-2.5 px-3 text-center whitespace-nowrap w-28">
                 <div class="inline-flex items-center justify-center border border-slate-200 rounded px-2 py-1 bg-white whitespace-nowrap focus-within:border-amber-500">
                   <input type="number" value="${ing.yieldRate}" min="1" max="100"
@@ -1017,9 +1257,13 @@
                   <span class="text-slate-500 ml-1">%</span>
                 </div>
               </td>
-              <!-- 実質単価 (見切れないよう十分な幅を確保) -->
-              <td class="py-2.5 px-4 text-right font-mono font-bold text-amber-700 whitespace-nowrap w-36 text-sm">
+              <td class="py-2.5 px-3 text-right font-mono font-bold text-amber-700 whitespace-nowrap w-32 text-sm">
                 ¥${effCost.toFixed(2)}<span class="text-xs text-slate-500 font-normal">/${unit}</span>
+              </td>
+              <td class="py-2.5 px-3 text-center whitespace-nowrap w-14">
+                <button onclick="deleteMasterIngredient('${ing.id}')" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition" title="この食材をワンクリックで削除">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
               </td>
             </tr>
           `;
@@ -1040,7 +1284,8 @@
                   <th class="py-2.5 px-3 text-right">規格容量 (単位自由)</th>
                   <th class="py-2.5 px-3 text-right">仕入価格</th>
                   <th class="py-2.5 px-3 text-center">歩留まり</th>
-                  <th class="py-2.5 px-4 text-right">実質単価</th>
+                  <th class="py-2.5 px-3 text-right">実質単価</th>
+                  <th class="py-2.5 px-3 text-center">削除</th>
                 </tr>
               </thead>
               <tbody>${rowsHtml}</tbody>
@@ -1049,6 +1294,16 @@
         `;
         container.appendChild(section);
       });
+    }
+
+    function deleteMasterIngredient(ingId) {
+      ingredientsMaster = ingredientsMaster.filter(m => m.id !== ingId);
+      currentRecipe.items = currentRecipe.items.filter(item => item.ingId !== ingId);
+      saveToStorage();
+      renderMasterDatabase();
+      renderIngredientSelect();
+      renderRecipeTable();
+      renderSavedRecipes();
     }
 
     function updateMasterField(idx, field, value) {
@@ -1060,6 +1315,7 @@
       } else {
         ingredientsMaster[idx][field] = value.trim();
       }
+      saveToStorage();
       renderMasterDatabase();
       renderIngredientSelect();
       renderRecipeTable();
@@ -1094,6 +1350,7 @@
       document.getElementById('new-ing-name').value = '';
       document.getElementById('new-ing-pkg').value = '';
       document.getElementById('new-ing-price').value = '';
+      saveToStorage();
       renderMasterDatabase();
       renderIngredientSelect();
     }
@@ -1107,9 +1364,65 @@
 商品コード: 510029  カマンベールチーズ ホール 1pc  680円`;
     }
 
-    function parseSupplierText() {
+    async function parseSupplierText() {
       const raw = document.getElementById('supplier-raw-text').value.trim();
       if (!raw) return;
+
+      const apiKey = localStorage.getItem(STORAGE_KEY_API);
+      if (apiKey) {
+        const btn = document.getElementById('btn-parse-supplier');
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> AI解析中...';
+        btn.disabled = true;
+
+        try {
+          const prompt = `以下の卸サイトの取引明細テキストから食材データを抽出し、JSON配列のみで出力してください。
+※kgは1000倍してunitを"g"に、Lは1000倍してunitを"ml"に変換してください。
+※カテゴリーは「肉類」「魚介類」「野菜・果実」「乳製品・卵」「乾物・麺・粉」「調味料・油」のいずれかにしてください。
+出力形式: [{"name":"商品名","category":"肉類","supplier":"仕入企業名","packageGrams":1000,"unit":"g","packagePrice":1500,"yieldRate":100}]
+
+対象テキスト:
+${raw}`;
+
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { responseMimeType: "application/json" }
+            })
+          });
+          const data = await res.json();
+          const parsedList = JSON.parse(data.candidates[0].content.parts[0].text);
+          if (Array.isArray(parsedList) && parsedList.length > 0) {
+            parsedList.forEach((item, i) => {
+              ingredientsMaster.push({
+                id: 'ing-' + Date.now() + '-' + i,
+                name: item.name || '抽出食材',
+                category: item.category || '野菜・果実',
+                supplier: item.supplier || '卸サイト抽出',
+                packageGrams: Number(item.packageGrams) || 1000,
+                unit: item.unit || 'g',
+                packagePrice: Number(item.packagePrice) || 500,
+                yieldRate: Number(item.yieldRate) || 100
+              });
+            });
+            saveToStorage();
+            renderMasterDatabase();
+            renderIngredientSelect();
+            document.getElementById('supplier-raw-text').value = '';
+            alert(`Gemini AIで${parsedList.length}件の食材を高精度抽出し、登録しました！`);
+            btn.innerHTML = orig;
+            btn.disabled = false;
+            return;
+          }
+        } catch (e) {
+          console.warn('Gemini解析フォールバック:', e);
+        } finally {
+          btn.innerHTML = orig;
+          btn.disabled = false;
+        }
+      }
 
       const lines = raw.split('\n');
       let supplierName = '卸サイト抽出';
@@ -1174,6 +1487,7 @@
       });
 
       if (addedCount > 0) {
+        saveToStorage();
         renderMasterDatabase();
         renderIngredientSelect();
         document.getElementById('supplier-raw-text').value = '';
@@ -1181,7 +1495,7 @@
       }
     }
 
-    // ====== 6. 保存済みレシピ帳（全体原価率計算・分類・詳細モーダル・A4印刷） ======
+    // ====== 7. 保存済みレシピ帳 ======
     function setSavedFilter(filter) {
       savedFilterMode = filter;
       ['all', 'menu', 'prep'].forEach(f => {
@@ -1376,6 +1690,13 @@
       document.getElementById('recipe-detail-modal').classList.add('hidden');
     }
 
+    function deleteSavedRecipe() {
+      savedRecipes = savedRecipes.filter(r => r.id !== activeModalRecipeId);
+      saveToStorage();
+      closeRecipeModal();
+      renderSavedRecipes();
+    }
+
     function loadSavedIntoEditor() {
       const rec = savedRecipes.find(r => r.id === activeModalRecipeId);
       if (!rec) return;
@@ -1401,6 +1722,104 @@
       switchTab('recipe');
     }
 
+    // ====== 8. 設定モーダル（APIキー保存 ＆ JSONバックアップ書き出し/読み込み） ======
+    function openSettingsModal() {
+      const savedKey = localStorage.getItem(STORAGE_KEY_API) || '';
+      document.getElementById('gemini-api-key-input').value = savedKey;
+      updateApiKeyBadge();
+      document.getElementById('settings-modal').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settings-modal').classList.add('hidden');
+    }
+
+    function updateApiKeyBadge() {
+      const savedKey = localStorage.getItem(STORAGE_KEY_API);
+      const badge = document.getElementById('api-key-status');
+      if (!badge) return;
+      if (savedKey && savedKey.startsWith('AIza')) {
+        badge.textContent = 'API連携 有効';
+        badge.className = 'text-xs font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800';
+      } else {
+        badge.textContent = '未設定（デモモード）';
+        badge.className = 'text-xs font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-600';
+      }
+    }
+
+    function saveApiKey() {
+      const val = document.getElementById('gemini-api-key-input').value.trim();
+      if (!val) {
+        alert('APIキーを入力してください。');
+        return;
+      }
+      localStorage.setItem(STORAGE_KEY_API, val);
+      updateApiKeyBadge();
+      alert('Gemini APIキーをブラウザ内に安全に保存しました！');
+    }
+
+    function clearApiKey() {
+      localStorage.removeItem(STORAGE_KEY_API);
+      document.getElementById('gemini-api-key-input').value = '';
+      updateApiKeyBadge();
+      alert('APIキーを消去しました。');
+    }
+
+    function exportBackupJson() {
+      const backupObj = {
+        exportedAt: new Date().toISOString(),
+        ingredientsMaster,
+        savedRecipes
+      };
+      const blob = new Blob([JSON.stringify(backupObj, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `chefcost_backup_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importBackupJson(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (Array.isArray(data.ingredientsMaster) && Array.isArray(data.savedRecipes)) {
+            ingredientsMaster = data.ingredientsMaster;
+            savedRecipes = data.savedRecipes;
+            saveToStorage();
+            renderMasterDatabase();
+            renderIngredientSelect();
+            renderRecipeTable();
+            renderSavedRecipes();
+            alert('バックアップデータを正常に復元しました！');
+            closeSettingsModal();
+          } else {
+            alert('ファイルの形式が正しくありません。');
+          }
+        } catch (err) {
+          alert('JSONファイルの読み込みに失敗しました。');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetToDefaultData() {
+      ingredientsMaster = JSON.parse(JSON.stringify(DEFAULT_INGREDIENTS));
+      savedRecipes = JSON.parse(JSON.stringify(DEFAULT_SAVED_RECIPES));
+      saveToStorage();
+      renderMasterDatabase();
+      renderIngredientSelect();
+      renderRecipeTable();
+      renderSavedRecipes();
+      alert('初期サンプルデータにリセットしました。');
+      closeSettingsModal();
+    }
+
+    // ====== 9. A4・1ページ印刷 ======
     function triggerDirectPrint(recId) {
       activeModalRecipeId = recId;
       printSelectedRecipe();
