@@ -1,2199 +1,875 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ChefCost AI - 飲食店向けAIレシピ表＆原価自動算出システム</title>
-  <!-- Tailwind CSS -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChefCost AI - 飲食店向けAIレシピ表＆原価管理システム</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts: Inter & Noto Sans JP -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Font Awesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Inter"', '"Noto Sans JP"', 'sans-serif'],
-          },
-          colors: {
-            navy: {
-              800: '#1e293b',
-              900: '#0f172a',
-              950: '#020617',
-            },
-            brand: {
-              50: '#fff7ed',
-              100: '#ffedd5',
-              500: '#f97316',
-              600: '#ea580c',
-              700: '#c2410c',
-            }
-          }
-        }
-      }
-    }
-  </script>
-
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
-    body {
-      font-family: 'Inter', 'Noto Sans JP', sans-serif;
-      background-color: #f8fafc;
-      color: #0f172a;
-    }
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #f1f5f9;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 9999px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
-    /* Value change pulse animation */
-    @keyframes popScale {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.06); }
-      100% { transform: scale(1); }
-    }
-    .animate-pop {
-      animation: popScale 0.25s ease-out;
-    }
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+    body { font-family: 'Noto Sans JP', sans-serif; background-color: #f8fafc; }
     @media print {
-      .no-print {
-        display: none !important;
-      }
-      .print-only {
-        display: block !important;
-      }
-      body {
-        background: white;
-      }
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      body { background-color: #fff; }
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col selection:bg-orange-500 selection:text-white">
+<body class="text-slate-800">
 
-  <!-- Top Navigation Header -->
-  <header class="bg-navy-900 text-white shadow-lg sticky top-0 z-30 no-print">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between py-3 gap-3">
-        <!-- Brand Logo -->
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-md shadow-orange-500/30">
-              <i class="fa-solid fa-utensils text-white text-lg"></i>
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white">ChefCost <span class="text-orange-400">AI</span></h1>
-                <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30">Pro Prototype</span>
-              </div>
-              <p class="text-xs text-slate-400">飲食店向け AIレシピ表＆原価自動算出システム</p>
-            </div>
-          </div>
-          <!-- Mobile quick badge -->
-          <div class="md:hidden flex items-center gap-2 text-xs bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700">
-            <i class="fa-solid fa-database text-amber-400"></i>
-            <span>登録食材: <strong id="header-ing-count-mobile" class="text-white">12</strong>品</span>
-          </div>
+  <!-- Header -->
+  <header class="bg-slate-900 text-white shadow-md no-print sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="bg-amber-500 text-slate-900 p-2 rounded-lg font-bold text-xl">
+          <i class="fa-solid fa-utensils"></i>
         </div>
-
-        <!-- Navigation Tabs -->
-        <nav class="flex items-center gap-1 sm:gap-2 bg-slate-800/90 p-1.5 rounded-xl border border-slate-700/80 overflow-x-auto">
-          <button onclick="switchTab('recipe')" id="tab-btn-recipe" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm">
-            <i class="fa-solid fa-camera-retro"></i>
-            <span>レシピ作成・原価計算</span>
-          </button>
-          <button onclick="switchTab('database')" id="tab-btn-database" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap text-slate-300 hover:text-white hover:bg-slate-700/60">
-            <i class="fa-solid fa-boxes-stacked"></i>
-            <span>食材マスタ登録 (卸連携)</span>
-            <span id="nav-ing-badge" class="ml-1 px-1.5 py-0.2 bg-slate-700 text-amber-300 rounded-md text-xs">12</span>
-          </button>
-          <button onclick="switchTab('saved')" id="tab-btn-saved" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap text-slate-300 hover:text-white hover:bg-slate-700/60">
-            <i class="fa-solid fa-book-open"></i>
-            <span>保存済みレシピ帳</span>
-            <span id="nav-recipe-badge" class="ml-1 px-1.5 py-0.2 bg-slate-700 text-orange-300 rounded-md text-xs">2</span>
-          </button>
-        </nav>
+        <div>
+          <h1 class="text-lg font-bold tracking-wider">ChefCost AI <span class="text-xs bg-amber-500/20 text-amber-400 border border-amber-400/30 px-2 py-0.5 rounded ml-2">PRO</span></h1>
+          <p class="text-xs text-slate-400">歩留まり計算・仕込みレシピ連動型 原価算出システム</p>
+        </div>
       </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex space-x-1 bg-slate-800 p-1 rounded-lg text-sm">
+        <button onclick="switchTab('recipe')" id="tab-recipe" class="px-4 py-2 rounded-md font-medium bg-amber-500 text-slate-900 transition">
+          <i class="fa-solid fa-camera mr-1"></i> レシピ作成・原価計算
+        </button>
+        <button onclick="switchTab('ingredients')" id="tab-ingredients" class="px-4 py-2 rounded-md font-medium text-slate-300 hover:text-white transition">
+          <i class="fa-solid fa-boxes-stacked mr-1"></i> 食材マスタ登録 (卸連携)
+        </button>
+        <button onclick="switchTab('saved')" id="tab-saved" class="px-4 py-2 rounded-md font-medium text-slate-300 hover:text-white transition">
+          <i class="fa-solid fa-book-open mr-1"></i> 保存済みレシピ一覧 (<span id="saved-count">2</span>)
+        </button>
+      </nav>
     </div>
   </header>
 
-  <!-- Toast Notification Container -->
-  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0 no-print"></div>
+  <main class="max-w-7xl mx-auto px-4 py-6">
 
-  <!-- Main Content Area -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 no-print">
-
-    <!-- ==========================================
-         TAB 1: レシピ作成＆原価・原価率シミュレーター
-         ========================================== -->
-    <section id="tab-recipe" class="space-y-6">
-      <!-- Top Workflow Guide Banner -->
-      <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-4 sm:p-5 text-white shadow-md border border-slate-700/80 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div class="space-y-1">
-          <div class="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider">
-            <i class="fa-solid fa-wand-magic-sparkles"></i>
-            <span>3ステップで原価計算を自動化</span>
+    <!-- ==================== TAB 1: レシピ作成・原価計算 ==================== -->
+    <section id="view-recipe" class="space-y-6">
+      
+      <!-- レシピ種別切り替え（グランドメニュー or 仕込みレシピ） -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">作成するレシピの種別</span>
+          <div class="flex items-center space-x-3 mt-1">
+            <label class="flex items-center space-x-2 cursor-pointer bg-slate-100 px-4 py-2 rounded-lg border-2 border-amber-500" id="label-type-menu">
+              <input type="radio" name="recipeType" value="menu" checked onchange="changeRecipeType('menu')" class="accent-amber-500">
+              <span class="font-bold text-sm"><i class="fa-solid fa-plate-wheat mr-1 text-amber-600"></i> グランドメニュー（販売商品）</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer bg-slate-100 px-4 py-2 rounded-lg border-2 border-transparent" id="label-type-prep">
+              <input type="radio" name="recipeType" value="prep" onchange="changeRecipeType('prep')" class="accent-indigo-600">
+              <span class="font-bold text-sm"><i class="fa-solid fa-kitchen-set mr-1 text-indigo-600"></i> 仕込みレシピ（ソース・中間加工品）</span>
+            </label>
           </div>
-          <h2 class="text-base sm:text-lg font-bold">完成写真を撮るだけ！登録済み食材からAIがレシピ表を自動作成します</h2>
         </div>
-        <div class="grid grid-cols-3 gap-2 sm:gap-3 text-xs">
-          <div class="bg-slate-800/90 border border-slate-700 rounded-xl p-2.5 flex items-center gap-2.5">
-            <span class="w-6 h-6 rounded-full bg-orange-500 text-white font-bold flex items-center justify-center shrink-0">1</span>
-            <span class="text-slate-200 leading-tight">料理写真を撮影・選択</span>
-          </div>
-          <div class="bg-slate-800/90 border border-slate-700 rounded-xl p-2.5 flex items-center gap-2.5">
-            <span class="w-6 h-6 rounded-full bg-orange-500 text-white font-bold flex items-center justify-center shrink-0">2</span>
-            <span class="text-slate-200 leading-tight">AIが店の食材を自動反映</span>
-          </div>
-          <div class="bg-slate-800/90 border border-slate-700 rounded-xl p-2.5 flex items-center gap-2.5">
-            <span class="w-6 h-6 rounded-full bg-orange-500 text-white font-bold flex items-center justify-center shrink-0">3</span>
-            <span class="text-slate-200 leading-tight">g数・売価入力で原価算出</span>
-          </div>
+        <div id="prep-notice" class="hidden bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs p-3 rounded-lg max-w-md">
+          <i class="fa-solid fa-circle-info mr-1"></i> <strong>仕込みレシピモード：</strong> 保存すると「仕上がり量1gあたりの原価」が自動計算され、食材マスタに【自家製仕込み品】として追加されます。
         </div>
       </div>
 
-      <!-- Main 12-Column Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- 左カラム：STEP 1 写真アップロード＆AIピックアップ -->
+        <div class="lg:col-span-4 space-y-6 no-print">
+          <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+            <h2 class="text-base font-bold flex items-center text-slate-800 mb-3">
+              <span class="bg-amber-500 text-slate-900 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold mr-2">1</span>
+              完成写真から食材を自動ピックアップ
+            </h2>
 
-        <!-- Left Column (Step 1: Photo Upload & AI Pickup) - 5 cols on desktop -->
-        <div class="lg:col-span-5 space-y-6">
-          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="px-2 py-0.5 bg-orange-100 text-orange-700 font-bold text-xs rounded-md">STEP 1</span>
-                <h3 class="font-bold text-slate-800 text-sm sm:text-base">完成図の写真＆AI食材ピックアップ</h3>
+            <!-- 画像プレビュー＆ドロップゾーン -->
+            <div class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center hover:border-amber-500 transition relative bg-slate-50">
+              <input type="file" id="photo-input" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleImageUpload(event)">
+              <div id="photo-placeholder" class="py-6">
+                <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-400 mb-2"></i>
+                <p class="text-sm font-medium text-slate-600">完成写真を撮影・アップロード</p>
+                <p class="text-xs text-slate-400 mt-1">AIが登録済みマスタから使用食材を特定します</p>
               </div>
-              <span class="text-xs text-slate-500"><i class="fa-solid fa-camera mr-1"></i>カメラ/画像対応</span>
+              <div id="photo-preview-wrap" class="hidden">
+                <img id="photo-preview" src="" alt="料理プレビュー" class="w-full h-44 object-cover rounded-lg mb-2 shadow-sm">
+                <span class="text-xs text-amber-600 font-bold"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>写真を変更する場合はクリック</span>
+              </div>
             </div>
 
-            <div class="p-5 space-y-4">
-              <!-- Image Dropzone / Preview -->
-              <div id="photo-dropzone" 
-                   class="relative border-2 border-dashed border-slate-300 hover:border-orange-500 rounded-2xl bg-slate-50/70 transition-all overflow-hidden group cursor-pointer"
-                   onclick="document.getElementById('dish-file-input').click()"
-                   ondragover="handleDragOver(event)"
-                   ondragleave="handleDragLeave(event)"
-                   ondrop="handleDrop(event)">
-                <input type="file" id="dish-file-input" accept="image/*" capture="environment" class="hidden" onchange="handleFileSelect(event)" />
+            <!-- デモ用ワンクリックAI解析プリセット -->
+            <div class="mt-4">
+              <p class="text-xs font-bold text-slate-500 mb-2"><i class="fa-solid fa-bolt text-amber-500 mr-1"></i>デモ用サンプル料理でAIピックアップを試す：</p>
+              <div class="grid grid-cols-1 gap-2">
+                <button onclick="loadPresetRecipe('bolognese')" class="text-left px-3 py-2 rounded-lg border border-slate-200 hover:bg-amber-50 hover:border-amber-300 text-xs font-medium flex items-center justify-between transition">
+                  <span>🍝 特製ボロネーゼ（仕込みソース使用）</span>
+                  <span class="text-amber-600 font-bold">AI反映 →</span>
+                </button>
+                <button onclick="loadPresetRecipe('meat_sauce_prep')" class="text-left px-3 py-2 rounded-lg border border-indigo-200 bg-indigo-50/40 hover:bg-indigo-50 text-xs font-medium flex items-center justify-between transition">
+                  <span>🍲 【仕込み】自家製ミートソース (2kg仕込)</span>
+                  <span class="text-indigo-600 font-bold">AI反映 →</span>
+                </button>
+                <button onclick="loadPresetRecipe('roast_beef')" class="text-left px-3 py-2 rounded-lg border border-slate-200 hover:bg-amber-50 hover:border-amber-300 text-xs font-medium flex items-center justify-between transition">
+                  <span>🥩 黒毛和牛ローストビーフ（歩留まり考慮）</span>
+                  <span class="text-amber-600 font-bold">AI反映 →</span>
+                </button>
+              </div>
+            </div>
+          </div>
 
-                <!-- Empty State -->
-                <div id="photo-empty-state" class="py-10 px-4 text-center space-y-3">
-                  <div class="w-16 h-16 rounded-2xl bg-orange-100 text-orange-600 mx-auto flex items-center justify-center text-2xl group-hover:scale-105 transition-transform shadow-inner">
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
-                  </div>
-                  <div>
-                    <p class="text-sm font-bold text-slate-700">完成料理の写真をドラッグ＆ドロップ、またはタップして撮影</p>
-                    <p class="text-xs text-slate-500 mt-1">JPG / PNG / WebP またはスマホカメラで直接撮影</p>
-                  </div>
-                </div>
+          <!-- 歩留まり率・仕込み連動の解説ボックス -->
+          <div class="bg-slate-800 text-slate-200 p-5 rounded-xl text-xs space-y-2">
+            <h3 class="font-bold text-amber-400 text-sm flex items-center">
+              <i class="fa-solid fa-calculator mr-2"></i> 歩留まり（ロス率）の計算式
+            </h3>
+            <p class="text-slate-300 leading-relaxed">
+              皮むき・筋引き・トリミング等で廃棄する部分がある場合、<strong>歩留まり率（可食部%）</strong>を設定することで、実際に皿に乗るグラム数から「ロス分を含めた実質原価」を算出します。
+            </p>
+            <div class="bg-slate-900 p-2.5 rounded border border-slate-700 font-mono text-[11px] text-amber-300">
+              実質原価 = (仕入g単価 ÷ (歩留まり% ÷ 100)) × 使用量(g)
+            </div>
+          </div>
+        </div>
 
-                <!-- Preview State -->
-                <div id="photo-preview-container" class="hidden relative">
-                  <img id="dish-preview-img" src="" alt="料理プレビュー" class="w-full h-56 sm:h-64 object-cover block" />
-                  <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 flex flex-col justify-between p-3">
-                    <div class="flex justify-between items-center">
-                      <span id="photo-badge-label" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-black/60 text-white backdrop-blur-sm">
-                        <i class="fa-solid fa-utensils text-orange-400 mr-1"></i>料理画像セット完了
-                      </span>
-                      <button type="button" onclick="event.stopPropagation(); document.getElementById('dish-file-input').click()" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white/90 hover:bg-white text-slate-800 shadow">
-                        <i class="fa-solid fa-rotate mr-1"></i>写真を変更
-                      </button>
-                    </div>
-                    <div class="text-white text-xs">
-                      <p id="photo-dish-caption" class="font-bold text-sm drop-shadow"></p>
-                    </div>
-                  </div>
+        <!-- 右カラム：STEP 2 & 3 レシピ表・グラム入力・原価計算 -->
+        <div class="lg:col-span-8 space-y-6">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            
+            <!-- レシピ基本情報ヘッダー -->
+            <div class="flex flex-wrap justify-between items-start gap-4 pb-4 border-b border-slate-200">
+              <div class="flex-1 min-w-[240px]">
+                <div class="flex items-center space-x-2 mb-1">
+                  <span id="badge-recipe-type" class="text-xs font-bold px-2.5 py-0.5 rounded bg-amber-100 text-amber-800">グランドメニュー</span>
+                  <span class="text-xs text-slate-400">STEP 2: 食材・使用量・歩留まりの調整</span>
                 </div>
+                <input type="text" id="recipe-name" value="特製ボロネーゼ パスタ" placeholder="メニュー名 / 仕込み品名を入力" class="w-full text-xl font-bold text-slate-800 border-b-2 border-transparent focus:border-amber-500 focus:outline-none py-1">
               </div>
 
-              <!-- Quick Sample Dish Selector Buttons -->
-              <div class="space-y-2">
-                <div class="flex items-center justify-between">
-                  <label class="text-xs font-bold text-slate-600 flex items-center gap-1.5">
-                    <i class="fa-solid fa-bolt text-amber-500"></i>
-                    <span>手元に写真がない場合は「サンプル料理写真」で即体験：</span>
-                  </label>
-                </div>
-                <div class="grid grid-cols-3 gap-2">
-                  <button type="button" onclick="selectSampleDish('bolognese')" id="sample-btn-bolognese" class="sample-dish-btn flex flex-col items-center p-2.5 rounded-xl border border-slate-200 hover:border-orange-400 hover:bg-orange-50/50 transition-all text-center group">
-                    <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">🍝</span>
-                    <span class="text-xs font-bold text-slate-800 leading-tight">濃厚ボロネーゼ</span>
-                    <span class="text-[10px] text-slate-500 mt-0.5">パスタ・牛バラ</span>
-                  </button>
-                  <button type="button" onclick="selectSampleDish('margherita')" id="sample-btn-margherita" class="sample-dish-btn flex flex-col items-center p-2.5 rounded-xl border border-slate-200 hover:border-orange-400 hover:bg-orange-50/50 transition-all text-center group">
-                    <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">🍕</span>
-                    <span class="text-xs font-bold text-slate-800 leading-tight">マルゲリータ</span>
-                    <span class="text-[10px] text-slate-500 mt-0.5">チーズ・トマト</span>
-                  </button>
-                  <button type="button" onclick="selectSampleDish('chicken')" id="sample-btn-chicken" class="sample-dish-btn flex flex-col items-center p-2.5 rounded-xl border border-slate-200 hover:border-orange-400 hover:bg-orange-50/50 transition-all text-center group">
-                    <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">🍗</span>
-                    <span class="text-xs font-bold text-slate-800 leading-tight">グリルチキン添え</span>
-                    <span class="text-[10px] text-slate-500 mt-0.5">鶏もも・サラダ</span>
-                  </button>
-                </div>
+              <div class="flex items-center space-x-2 no-print">
+                <button onclick="window.print()" class="px-3 py-2 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition">
+                  <i class="fa-solid fa-print mr-1"></i> レシピ表を印刷
+                </button>
+                <button onclick="saveCurrentRecipe()" class="px-4 py-2 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-lg shadow-sm transition">
+                  <i class="fa-solid fa-floppy-disk mr-1"></i> レシピを保存する
+                </button>
               </div>
+            </div>
 
-              <!-- Optional Chef Memo / Hint for AI -->
-              <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">AIへの補足メモ（任意：見えない隠し味や特徴があれば）</label>
-                <input type="text" id="ai-photo-hint" placeholder="例：エビも少し入っています、ガーリックオイル仕上げ 等" class="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 bg-slate-50 focus:bg-white" />
-              </div>
+            <!-- 食材テーブル -->
+            <div class="mt-4 overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase bg-slate-50">
+                    <th class="py-2.5 px-2">使用食材 (区分)</th>
+                    <th class="py-2.5 px-2 text-right">仕入単価/g</th>
+                    <th class="py-2.5 px-2 text-center w-24">歩留まり(%)</th>
+                    <th class="py-2.5 px-2 text-right">実質単価/g</th>
+                    <th class="py-2.5 px-2 text-center w-28">正味使用量</th>
+                    <th class="py-2.5 px-2 text-right">食材原価</th>
+                    <th class="py-2.5 px-2 text-center w-10 no-print">削除</th>
+                  </tr>
+                </thead>
+                <tbody id="recipe-rows" class="divide-y divide-slate-200 text-sm">
+                  <!-- JSで動的に描画 -->
+                </tbody>
+              </table>
+            </div>
 
-              <!-- Trigger AI Pickup Button -->
-              <button type="button" id="btn-ai-pickup" onclick="runAIPhotoPickup()" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-bold text-sm shadow-md shadow-orange-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.99]">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
-                <span>写真からお店の登録食材をAI自動ピックアップ</span>
+            <!-- 食材を手動で追加するバー -->
+            <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2 no-print">
+              <select id="add-ingredient-select" class="flex-1 min-w-[220px] text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500 bg-white">
+                <!-- JSで食材マスタ＆仕込み品を格納 -->
+              </select>
+              <button onclick="addIngredientRow()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition">
+                <i class="fa-solid fa-plus mr-1"></i> 食材・仕込み品を行に追加
               </button>
-
-              <!-- AI Analysis Status / Log Box -->
-              <div id="ai-pickup-status" class="hidden rounded-xl p-3.5 bg-slate-900 text-slate-100 text-xs space-y-2 border border-slate-700">
-                <div class="flex items-center justify-between">
-                  <span class="font-bold text-amber-400 flex items-center gap-1.5">
-                    <i class="fa-solid fa-microchip"></i>
-                    <span id="ai-status-title">AI画像解析＆食材マスタ照合</span>
-                  </span>
-                  <span id="ai-status-badge" class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold">完了</span>
-                </div>
-                <p id="ai-status-desc" class="text-slate-300 leading-relaxed"></p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 3 (Placed on Left Column below Photo on Desktop for instant glance, or right side) -->
-          <!-- Let's place Target Price Simulator & Cost Breakdown Chart here -->
-          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div class="flex items-center gap-2">
-                <i class="fa-solid fa-calculator text-orange-500"></i>
-                <h3 class="font-bold text-slate-800 text-sm">目標原価率からの推奨売価シミュレーター</h3>
-              </div>
-              <span class="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">価格決定支援</span>
             </div>
 
-            <div class="space-y-3">
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-slate-600 font-medium">目標とする原価率：</span>
-                <div class="flex items-center gap-2">
-                  <input type="range" id="target-ratio-slider" min="15" max="45" step="1" value="30" oninput="updateTargetRatio(this.value)" class="w-28 accent-orange-500 cursor-pointer" />
-                  <span id="target-ratio-display" class="font-bold text-sm text-slate-900 w-12 text-right">30%</span>
-                </div>
-              </div>
+            <!-- STEP 3: 仕上がり量・販売価格・原価率パネル -->
+            <div class="mt-6 pt-6 border-t-2 border-slate-200">
+              <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center">
+                <span class="bg-amber-500 text-slate-900 w-5 h-5 rounded-full inline-flex items-center justify-center text-xs font-bold mr-2">3</span>
+                仕上がり量・販売価格の入力と原価シミュレーション
+              </h3>
 
-              <div class="grid grid-cols-2 gap-3 pt-1">
-                <div class="bg-slate-50 rounded-xl p-3 border border-slate-200/80">
-                  <div class="text-[11px] text-slate-500">推奨販売価格 (税抜)</div>
-                  <div class="text-lg font-extrabold text-slate-800 mt-0.5">
-                    ¥<span id="recommended-price-ex">0</span>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                <!-- 入力エリア -->
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">仕上がり総重量 / 出来高 (g・ml)</label>
+                    <div class="relative">
+                      <input type="number" id="finished-weight" value="320" min="1" oninput="recalculateRecipe()" class="w-full text-lg font-bold bg-white border border-slate-300 rounded-lg px-3 py-1.5 pr-8 focus:outline-none focus:border-amber-500">
+                      <span class="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">g</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-0.5">※煮詰まりや加水後の最終仕上がり量</p>
                   </div>
-                  <div class="text-[10px] text-slate-400 mt-0.5">現在との差: <span id="recommended-diff-label">±0円</span></div>
-                </div>
-                <div class="bg-orange-50/70 rounded-xl p-3 border border-orange-200/80">
-                  <div class="text-[11px] text-orange-700 font-medium">推奨販売価格 (税込10%)</div>
-                  <div class="text-lg font-extrabold text-orange-600 mt-0.5">
-                    ¥<span id="recommended-price-inc">0</span>
+
+                  <div id="selling-price-wrap">
+                    <label class="block text-xs font-bold text-slate-600 mb-1">販売価格（税抜・円）</label>
+                    <div class="relative">
+                      <input type="number" id="selling-price" value="1280" min="1" oninput="recalculateRecipe()" class="w-full text-lg font-bold bg-white border border-slate-300 rounded-lg px-3 py-1.5 pr-8 focus:outline-none focus:border-amber-500">
+                      <span class="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">円</span>
+                    </div>
                   </div>
-                  <button type="button" onclick="applyRecommendedPrice()" class="mt-1 text-[11px] font-bold text-orange-700 hover:text-orange-800 underline flex items-center gap-1">
-                    <span>この売価を適用する</span>
-                    <i class="fa-solid fa-arrow-right"></i>
-                  </button>
                 </div>
+
+                <!-- 算出結果：原価・1g単価 -->
+                <div class="bg-slate-900 text-white p-4 rounded-xl flex flex-col justify-between">
+                  <div>
+                    <span class="text-xs text-slate-400">レシピ総原価（歩留まりロス込）</span>
+                    <div class="text-3xl font-bold text-amber-400 mt-1">
+                      ¥<span id="total-cost">0</span>
+                    </div>
+                  </div>
+                  <div class="pt-3 border-t border-slate-800 flex justify-between items-center text-xs">
+                    <span class="text-slate-400">仕上がり 1g あたり原価:</span>
+                    <span class="font-bold text-base text-white">¥<span id="cost-per-gram">0.00</span> /g</span>
+                  </div>
+                </div>
+
+                <!-- 算出結果：原価率・粗利額 -->
+                <div id="profit-card" class="bg-amber-50 border border-amber-200 p-4 rounded-xl flex flex-col justify-between">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <span class="text-xs font-bold text-amber-900">原価率</span>
+                      <div class="text-3xl font-bold text-slate-900 mt-1">
+                        <span id="cost-rate">0.0</span><span class="text-lg">%</span>
+                      </div>
+                    </div>
+                    <span id="cost-rate-badge" class="text-xs font-bold px-2 py-1 rounded bg-emerald-100 text-emerald-800">適正水準</span>
+                  </div>
+                  <div class="pt-3 border-t border-amber-200/60 flex justify-between items-center text-xs text-amber-900">
+                    <span>1皿あたり粗利額:</span>
+                    <span class="font-bold text-base">¥<span id="gross-profit">0</span></span>
+                  </div>
+                </div>
+
               </div>
             </div>
+
           </div>
         </div>
 
-        <!-- Right Column (Step 2: Recipe Sheet Editor & Step 3: Live Cost Dashboard) - 7 cols on desktop -->
-        <div class="lg:col-span-7 space-y-6">
-
-          <!-- STEP 3: Real-time Cost & Cost Ratio Dashboard Cards -->
-          <div class="bg-navy-900 text-white rounded-2xl p-5 shadow-lg border border-slate-800 space-y-4">
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
-              <div class="flex items-center gap-2">
-                <span class="px-2 py-0.5 bg-orange-500 text-white font-bold text-xs rounded-md">LIVE</span>
-                <h3 class="font-bold text-sm sm:text-base text-white">リアルタイム原価・原価率ダッシュボード</h3>
-              </div>
-              <!-- Status Judgment Badge -->
-              <div id="cost-status-pill" class="px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                <i class="fa-solid fa-circle-check"></i>
-                <span>適正原価レンジ (25%〜32%)</span>
-              </div>
-            </div>
-
-            <!-- 4 KPI Cards -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <!-- Total Cost -->
-              <div class="bg-slate-800/90 border border-slate-700/80 rounded-xl p-3.5">
-                <div class="text-xs text-slate-400 flex items-center justify-between">
-                  <span>総原価 (1人前)</span>
-                  <i class="fa-solid fa-coins text-amber-400"></i>
-                </div>
-                <div id="kpi-total-cost" class="text-xl sm:text-2xl font-extrabold text-white mt-1 tracking-tight">
-                  ¥0.0
-                </div>
-                <div class="text-[11px] text-slate-400 mt-1">
-                  1gあたり原価: <strong id="kpi-cost-per-gram" class="text-slate-200">¥0.00</strong>/g
-                </div>
-              </div>
-
-              <!-- Cost Ratio (%) -->
-              <div class="bg-slate-800/90 border border-slate-700/80 rounded-xl p-3.5">
-                <div class="text-xs text-slate-400 flex items-center justify-between">
-                  <span>原価率 (対税抜売価)</span>
-                  <i class="fa-solid fa-chart-pie text-orange-400"></i>
-                </div>
-                <div id="kpi-cost-ratio" class="text-xl sm:text-2xl font-extrabold text-emerald-400 mt-1 tracking-tight">
-                  0.0%
-                </div>
-                <div class="text-[11px] text-slate-400 mt-1">
-                  対税込原価率: <span id="kpi-cost-ratio-inc" class="text-slate-300">0.0%</span>
-                </div>
-              </div>
-
-              <!-- Gross Profit -->
-              <div class="bg-slate-800/90 border border-slate-700/80 rounded-xl p-3.5">
-                <div class="text-xs text-slate-400 flex items-center justify-between">
-                  <span>粗利額 (税抜ベース)</span>
-                  <i class="fa-solid fa-sack-dollar text-emerald-400"></i>
-                </div>
-                <div id="kpi-gross-profit" class="text-xl sm:text-2xl font-extrabold text-white mt-1 tracking-tight">
-                  ¥0
-                </div>
-                <div class="text-[11px] text-slate-400 mt-1">
-                  粗利率: <strong id="kpi-gross-margin" class="text-emerald-300">0.0%</strong>
-                </div>
-              </div>
-
-              <!-- Finished Weight -->
-              <div class="bg-slate-800/90 border border-slate-700/80 rounded-xl p-3.5">
-                <div class="text-xs text-slate-400 flex items-center justify-between">
-                  <span>仕上がり量 / 投入量</span>
-                  <i class="fa-solid fa-scale-balanced text-sky-400"></i>
-                </div>
-                <div class="text-xl sm:text-2xl font-extrabold text-white mt-1 tracking-tight">
-                  <span id="kpi-finished-weight">320</span><span class="text-sm font-normal text-slate-400">g</span>
-                </div>
-                <div class="text-[11px] text-slate-400 mt-1">
-                  投入計: <span id="kpi-raw-total-weight" class="text-slate-200">0g</span> (歩留 <span id="kpi-yield-rate">100</span>%)
-                </div>
-              </div>
-            </div>
-
-            <!-- Visual Cost Ratio Gauge Bar -->
-            <div class="space-y-1.5 pt-1">
-              <div class="flex justify-between text-[11px] text-slate-400">
-                <span>0%</span>
-                <span class="text-sky-300">優良 (&lt;25%)</span>
-                <span class="text-emerald-300">適正 (25-32%)</span>
-                <span class="text-amber-300">注意 (32-38%)</span>
-                <span class="text-rose-400">要改善 (38%+)</span>
-              </div>
-              <div class="h-3 w-full rounded-full bg-slate-800 overflow-hidden relative flex p-0.5 border border-slate-700">
-                <!-- Background zone markers -->
-                <div id="cost-gauge-bar" class="h-full rounded-full transition-all duration-300 bg-gradient-to-r from-sky-400 via-emerald-400 to-orange-500" style="width: 28%"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- STEP 2: Recipe Basic Info & Ingredients Table Card -->
-          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
-              <div class="flex items-center gap-2">
-                <span class="px-2 py-0.5 bg-orange-100 text-orange-700 font-bold text-xs rounded-md">STEP 2</span>
-                <h3 class="font-bold text-slate-800 text-sm sm:text-base">レシピ表・使用グラム数・販売価格の入力</h3>
-              </div>
-              <div class="flex items-center gap-2">
-                <button type="button" onclick="openPrintModal()" class="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors">
-                  <i class="fa-solid fa-print"></i>
-                  <span>レシピ表プレビュー/印刷</span>
-                </button>
-                <button type="button" onclick="saveCurrentRecipe()" class="px-3.5 py-1.5 rounded-lg bg-navy-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors">
-                  <i class="fa-solid fa-floppy-disk text-orange-400"></i>
-                  <span>レシピ帳に保存</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="p-5 space-y-5">
-              <!-- Menu Name, Finished Weight, Selling Price Inputs -->
-              <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 bg-slate-50/80 p-4 rounded-xl border border-slate-200/80">
-                <div class="sm:col-span-5">
-                  <label class="block text-xs font-bold text-slate-700 mb-1">メニュー名 <span class="text-rose-500">*</span></label>
-                  <input type="text" id="recipe-name-input" value="自家製濃厚ボロネーゼパスタ" oninput="recalculateRecipe()" placeholder="例：自家製ボロネーゼパスタ" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white" />
-                </div>
-
-                <div class="sm:col-span-3">
-                  <label class="block text-xs font-bold text-slate-700 mb-1">仕上がり量 (g / ml)</label>
-                  <div class="relative">
-                    <input type="number" id="recipe-finished-weight" value="320" min="1" oninput="recalculateRecipe()" class="w-full pl-3 pr-8 py-2 rounded-xl border border-slate-300 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white" />
-                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">g</span>
-                  </div>
-                </div>
-
-                <div class="sm:col-span-4">
-                  <div class="flex items-center justify-between mb-1">
-                    <label class="text-xs font-bold text-slate-700">税抜販売価格 (円)</label>
-                    <span class="text-[11px] text-slate-500">税込: <strong id="price-inc-tax-label" class="text-slate-800">¥1,408</strong></span>
-                  </div>
-                  <div class="relative">
-                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">¥</span>
-                    <input type="number" id="recipe-selling-price" value="1280" min="1" step="10" oninput="recalculateRecipe()" class="w-full pl-7 pr-3 py-2 rounded-xl border border-orange-300 text-sm font-extrabold text-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 bg-orange-50/40" />
-                  </div>
-                </div>
-              </div>
-
-              <!-- Recipe Ingredient Table -->
-              <div class="space-y-3">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                  <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                    <i class="fa-solid fa-list-check text-orange-500"></i>
-                    <span>使用食材リスト（グラム数を入力すると即座に原価計算されます）</span>
-                  </h4>
-                  <button type="button" onclick="clearRecipeRows()" class="text-xs text-slate-400 hover:text-rose-600 transition-colors">
-                    <i class="fa-solid fa-trash-can mr-1"></i>リストを空にする
-                  </button>
-                </div>
-
-                <div class="overflow-x-auto border border-slate-200 rounded-xl">
-                  <table class="w-full text-left border-collapse">
-                    <thead>
-                      <tr class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200">
-                        <th class="py-2.5 px-3 min-w-[180px]">食材名 (登録マスタ連動)</th>
-                        <th class="py-2.5 px-2 text-right whitespace-nowrap">単価 (1g/ml)</th>
-                        <th class="py-2.5 px-3 text-center min-w-[150px]">使用量 (g / ml)</th>
-                        <th class="py-2.5 px-3 text-right whitespace-nowrap">小計原価</th>
-                        <th class="py-2.5 px-2 text-center w-10">削除</th>
-                      </tr>
-                    </thead>
-                    <tbody id="recipe-rows-tbody" class="divide-y divide-slate-200 text-sm">
-                      <!-- Populated dynamically by JS -->
-                    </tbody>
-                    <tfoot>
-                      <tr class="bg-slate-50 font-bold border-t border-slate-200 text-slate-800">
-                        <td class="py-3 px-3 text-xs sm:text-sm" colspan="2">
-                          <button type="button" onclick="addRecipeRow()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold shadow-sm transition-all">
-                            <i class="fa-solid fa-plus"></i>
-                            <span>登録食材から行を追加</span>
-                          </button>
-                        </td>
-                        <td class="py-3 px-3 text-center text-xs text-slate-600">
-                          総投入量: <strong id="table-total-weight" class="text-slate-900">0</strong>g
-                        </td>
-                        <td class="py-3 px-3 text-right text-base text-orange-600 font-extrabold">
-                          ¥<span id="table-total-cost">0.0</span>
-                        </td>
-                        <td></td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </div>
-
-              <!-- Cooking Note / Procedure Memo -->
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">調理工程・盛り付けポイントメモ（レシピ表に印刷されます）</label>
-                <textarea id="recipe-memo-input" rows="2" placeholder="例：1. ニンニクをオリーブオイルで弱火で香り出し。 2. 牛バラと玉ねぎを炒めトマト缶で煮込む。 3. 茹で上げたパスタと和えてベビーリーフを天盛り。" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-500">1. ニンニクをオリーブオイルで弱火で香り出し。 2. 牛バラと玉ねぎを炒め、完熟トマトホール缶を加えて煮込む。 3. 茹で上げたパスタと和え、仕上げにブラックペッパーとベビーリーフを飾る。</textarea>
-              </div>
-            </div>
-          </div>
-
-        </div>
       </div>
     </section>
 
-    <!-- ==========================================
-         TAB 2: 食材データベース（卸サイトからの一括登録機能つき）
-         ========================================== -->
-    <section id="tab-database" class="hidden space-y-6">
-      <!-- Top Section: Wholesale Site Copy-Paste Bulk Registration -->
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="bg-gradient-to-r from-navy-900 to-slate-800 px-6 py-4 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div class="space-y-0.5">
-            <div class="flex items-center gap-2">
-              <span class="px-2 py-0.5 rounded bg-orange-500 text-white text-xs font-bold">AI 卸連携</span>
-              <h2 class="text-base sm:text-lg font-bold">卸サイトの取引ページ・納品書から食材を一括登録</h2>
-            </div>
-            <p class="text-xs text-slate-300">仕入れている卸企業の注文履歴ページや納品書テキストをそのままコピー＆ペーストするだけで、AIが規格(g/ml)と1g単価を自動計算して登録します。</p>
-          </div>
-          <button type="button" onclick="fillSampleWholesaleText()" class="shrink-0 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow transition-all">
-            <i class="fa-solid fa-paste"></i>
-            <span>サンプル取引データを貼り付ける</span>
-          </button>
-        </div>
+    <!-- ==================== TAB 2: 食材マスタ登録 (卸サイト連携) ==================== -->
+    <section id="view-ingredients" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- 左：卸サイト取引ページ コピペ一括抽出 -->
+        <div class="lg:col-span-5 bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+          <h2 class="text-base font-bold text-slate-800 flex items-center">
+            <i class="fa-solid fa-paste text-amber-500 mr-2"></i>
+            卸サイトの取引ページを貼り付けて一括登録
+          </h2>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            発注サイト（インフォマート、アミカ、Mマート等）の納品履歴や取引ページの画面テキストをそのままコピー＆ペーストしてください。AIが<strong>商品名・規格容量・仕入単価・標準歩留まり率</strong>を自動解析してマスタに登録します。
+          </p>
 
-        <div class="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <!-- Textarea Input -->
-          <div class="lg:col-span-6 space-y-3">
-            <div class="flex items-center justify-between">
-              <label class="text-xs font-bold text-slate-700">卸サイトの取引履歴ページ / 納品書のコピペ入力欄</label>
-              <button type="button" onclick="document.getElementById('wholesale-raw-text').value = ''" class="text-xs text-slate-400 hover:text-slate-600">クリア</button>
-            </div>
-            <textarea id="wholesale-raw-text" rows="8" placeholder="ここに業務用卸サイト（インフォマート、アミカ、フーヅフリッジ、各種業務用ネットスーパー等）の取引画面テキストやURL・納品書明細をそのまま貼り付けてください...&#10;&#10;例：&#10;・ノルウェー産 アトランティックサーモンフィレ 1パック(約800g) 単価:2,880円&#10;・北海道産 純生クリーム35% 1000ml×1本 1,450円" class="w-full p-3.5 rounded-xl border border-slate-300 text-xs sm:text-sm font-mono bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"></textarea>
-
-            <button type="button" id="btn-parse-wholesale" onclick="parseWholesaleDataWithAI()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all">
-              <i class="fa-solid fa-wand-magic-sparkles"></i>
-              <span>AIで解析して食材を抽出プレビュー</span>
+          <div class="flex gap-2">
+            <button onclick="pasteSampleSupplierText()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg transition">
+              <i class="fa-solid fa-file-lines mr-1"></i> サンプル取引ページ文字を貼付
+            </button>
+            <button onclick="document.getElementById('supplier-raw-text').value=''" class="text-xs text-slate-400 hover:text-slate-600 px-2 py-1.5">
+              クリア
             </button>
           </div>
 
-          <!-- Extracted Preview Area -->
-          <div class="lg:col-span-6 flex flex-col justify-between bg-slate-50 rounded-xl border border-slate-200 p-4">
-            <div class="space-y-3">
-              <div class="flex items-center justify-between border-b border-slate-200 pb-2.5">
-                <h3 class="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                  <i class="fa-solid fa-magnifying-glass-chart text-orange-500"></i>
-                  <span>AI抽出プレビュー（内容量＆1g単価の自動換算結果）</span>
-                </h3>
-                <span id="parsed-count-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">0件</span>
-              </div>
+          <textarea id="supplier-raw-text" rows="7" placeholder="ここに卸サイトの取引履歴ページのテキストや表をそのまま貼り付けてください...&#10;例：&#10;オーストラリア産 牛ももブロック 2kgパック 4,800円&#10;北海道産 玉ねぎ Lサイズ 10kg箱 2,200円&#10;ディチェコ No.11 スパゲッティ 500g 380円" class="w-full text-xs border border-slate-300 rounded-lg p-3 focus:outline-none focus:border-amber-500 font-mono bg-slate-50"></textarea>
 
-              <div id="wholesale-preview-empty" class="py-12 text-center text-slate-400 text-xs space-y-2">
-                <i class="fa-solid fa-file-invoice text-3xl text-slate-300"></i>
-                <p>左側の入力欄に取引データを貼り付けて<br>「AIで解析して食材を抽出プレビュー」を押してください。</p>
-              </div>
-
-              <div id="wholesale-preview-table-wrap" class="hidden max-h-60 overflow-y-auto border border-slate-200 rounded-lg bg-white">
-                <table class="w-full text-left border-collapse text-xs">
-                  <thead class="bg-slate-100 text-slate-600 sticky top-0">
-                    <tr>
-                      <th class="py-2 px-2.5">抽出された食材名</th>
-                      <th class="py-2 px-2">カテゴリ</th>
-                      <th class="py-2 px-2 text-right">内容量</th>
-                      <th class="py-2 px-2 text-right">仕入価格</th>
-                      <th class="py-2 px-2.5 text-right">1g単価</th>
-                    </tr>
-                  </thead>
-                  <tbody id="wholesale-preview-tbody" class="divide-y divide-slate-100"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <div class="pt-4 mt-4 border-t border-slate-200 flex justify-end">
-              <button type="button" id="btn-commit-wholesale" onclick="commitParsedIngredients()" disabled class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all">
-                <i class="fa-solid fa-database"></i>
-                <span>抽出された食材をマスタに一括追加する</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Bottom Section: Registered Ingredients Master Table + Manual Add -->
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
-              <i class="fa-solid fa-boxes-stacked text-orange-500"></i>
-              <span>店舗登録済み 食材データベース一覧</span>
-              <span id="db-total-count-label" class="text-xs px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold">12品目</span>
-            </h3>
-            <p class="text-xs text-slate-500 mt-0.5">ここに登録されている食材が、料理写真からのAI自動ピックアップ対象になります。</p>
-          </div>
-          <!-- Search & Category Filter -->
-          <div class="flex items-center gap-2">
-            <div class="relative">
-              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-              <input type="text" id="db-search-input" oninput="renderIngredientDatabase()" placeholder="食材名で検索..." class="pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Manual Quick Add Form -->
-        <div class="p-4 bg-orange-50/50 border-b border-orange-100">
-          <div class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
-            <i class="fa-solid fa-plus-circle text-orange-500"></i>
-            <span>1品ずつ手動で追加・登録</span>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
-            <div class="sm:col-span-4">
-              <label class="block text-[11px] text-slate-500 mb-0.5">食材名</label>
-              <input type="text" id="manual-ing-name" placeholder="例：北海道産 無塩バター" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white" />
-            </div>
-            <div class="sm:col-span-2">
-              <label class="block text-[11px] text-slate-500 mb-0.5">カテゴリ</label>
-              <select id="manual-ing-category" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white">
-                <option value="肉類">肉類</option>
-                <option value="魚介類">魚介類</option>
-                <option value="野菜・果物">野菜・果物</option>
-                <option value="乳製品・卵">乳製品・卵</option>
-                <option value="乾物・麺・粉">乾物・麺・粉</option>
-                <option value="調味料・油">調味料・油</option>
-                <option value="その他">その他</option>
-              </select>
-            </div>
-            <div class="sm:col-span-2">
-              <label class="block text-[11px] text-slate-500 mb-0.5">仕入規格・内容量(g/ml)</label>
-              <input type="number" id="manual-ing-weight" placeholder="450" min="1" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white" />
-            </div>
-            <div class="sm:col-span-2">
-              <label class="block text-[11px] text-slate-500 mb-0.5">仕入価格 (税抜・円)</label>
-              <input type="number" id="manual-ing-price" placeholder="980" min="1" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white" />
-            </div>
-            <div class="sm:col-span-2">
-              <button type="button" onclick="addManualIngredient()" class="w-full py-1.5 px-3 rounded-lg bg-navy-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-1 transition-all">
-                <i class="fa-solid fa-plus"></i>
-                <span>追加する</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Ingredients Table -->
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse text-xs sm:text-sm">
-            <thead>
-              <tr class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
-                <th class="py-3 px-4">食材名</th>
-                <th class="py-3 px-3">カテゴリ</th>
-                <th class="py-3 px-3 text-right">仕入規格・内容量</th>
-                <th class="py-3 px-3 text-right">仕入価格 (税抜)</th>
-                <th class="py-3 px-3 text-right">1g/mlあたり単価</th>
-                <th class="py-3 px-4 text-center">操作</th>
-              </tr>
-            </thead>
-            <tbody id="db-ingredients-tbody" class="divide-y divide-slate-200">
-              <!-- Populated by JS -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==========================================
-         TAB 3: 保存済みレシピ一覧
-         ========================================== -->
-    <section id="tab-saved" class="hidden space-y-6">
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4 mb-6">
-          <div>
-            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <i class="fa-solid fa-book-open text-orange-500"></i>
-              <span>保存済みレシピ帳（原価管理台帳）</span>
-            </h2>
-            <p class="text-xs text-slate-500 mt-0.5">保存したメニューの原価率一覧です。クリックして編集画面に呼び出したり、キッチン掲示用のレシピ表を出力できます。</p>
-          </div>
-          <button type="button" onclick="switchTab('recipe')" class="self-start sm:self-auto px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm">
-            <i class="fa-solid fa-plus"></i>
-            <span>新しいレシピを作成する</span>
+          <button onclick="parseSupplierText()" class="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-sm rounded-lg shadow-sm transition">
+            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> AIで取引データを解析してマスタへ一括登録
           </button>
         </div>
 
-        <div id="saved-recipes-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          <!-- Populated dynamically by JS -->
+        <!-- 右：登録済み食材＆自家製仕込み品マスタ一覧 -->
+        <div class="lg:col-span-7 bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+          <div class="flex flex-wrap justify-between items-center gap-2">
+            <div>
+              <h2 class="text-base font-bold text-slate-800">登録済み 食材・仕込み品マスタ一覧</h2>
+              <p class="text-xs text-slate-400">歩留まり率（可食部%）を変更すると、全レシピの実質単価に即時反映されます</p>
+            </div>
+            <span class="text-xs font-bold bg-slate-100 text-slate-700 px-3 py-1 rounded-full">全 <span id="master-count">0</span> 品目</span>
+          </div>
+
+          <!-- 手動1件追加フォーム -->
+          <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 grid grid-cols-2 sm:grid-cols-6 gap-2 text-xs">
+            <input type="text" id="new-ing-name" placeholder="食材名 (例: むき海老)" class="col-span-2 border border-slate-300 rounded px-2 py-1.5 bg-white">
+            <input type="number" id="new-ing-pkg" placeholder="内容量(g)" class="border border-slate-300 rounded px-2 py-1.5 bg-white">
+            <input type="number" id="new-ing-price" placeholder="仕入価格(円)" class="border border-slate-300 rounded px-2 py-1.5 bg-white">
+            <input type="number" id="new-ing-yield" placeholder="歩留まり%(例:90)" value="100" class="border border-slate-300 rounded px-2 py-1.5 bg-white">
+            <button onclick="addManualIngredient()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold rounded px-2 py-1.5">
+              ＋追加
+            </button>
+          </div>
+
+          <div class="overflow-x-auto max-h-[460px]">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead class="sticky top-0 bg-slate-100 text-slate-600 border-b border-slate-200">
+                <tr>
+                  <th class="py-2 px-2">区分</th>
+                  <th class="py-2 px-2">食材・仕込み品名</th>
+                  <th class="py-2 px-2 text-right">規格容量</th>
+                  <th class="py-2 px-2 text-right">仕入価格</th>
+                  <th class="py-2 px-2 text-right">仕入単価/g</th>
+                  <th class="py-2 px-2 text-center">歩留まり(%)</th>
+                  <th class="py-2 px-2 text-right">実質単価/g</th>
+                </tr>
+              </thead>
+              <tbody id="master-table-body" class="divide-y divide-slate-200">
+                <!-- JSで描画 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: 保存済みレシピ一覧 ==================== -->
+    <section id="view-saved" class="hidden space-y-6">
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-base font-bold text-slate-800 mb-4">保存済みレシピ・仕込み帳一覧</h2>
+        <div id="saved-recipes-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- JSで描画 -->
         </div>
       </div>
     </section>
 
   </main>
 
-  <!-- Printable Kitchen Recipe Card Modal -->
-  <div id="print-modal" class="fixed inset-0 z-50 hidden bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden my-8 border border-slate-200">
-      <!-- Modal Header (Hidden on Print) -->
-      <div class="bg-navy-900 text-white px-6 py-4 flex items-center justify-between no-print">
-        <div class="flex items-center gap-2">
-          <i class="fa-solid fa-file-lines text-orange-400"></i>
-          <h3 class="font-bold text-sm sm:text-base">キッチン掲示・保管用 標準レシピ＆原価表</h3>
-        </div>
-        <div class="flex items-center gap-2">
-          <button type="button" onclick="window.print()" class="px-3.5 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold flex items-center gap-1.5">
-            <i class="fa-solid fa-print"></i>
-            <span>印刷 / PDF保存</span>
-          </button>
-          <button type="button" onclick="closePrintModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Printable Sheet Content -->
-      <div id="printable-sheet-body" class="p-6 sm:p-8 space-y-6 text-slate-900">
-        <!-- Populated dynamically -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Footer -->
-  <footer class="bg-white border-t border-slate-200 py-4 mt-12 no-print">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-      <div>ChefCost AI - 飲食店向けレシピ表＆原価自動算出システム</div>
-      <div class="flex items-center gap-4">
-        <span><i class="fa-solid fa-check-circle text-emerald-500 mr-1"></i>卸サイト一括取込対応</span>
-        <span><i class="fa-solid fa-check-circle text-emerald-500 mr-1"></i>料理写真AIピックアップ対応</span>
-      </div>
-    </div>
-  </footer>
-
-  <!-- Main Application Script -->
   <script>
-    // =========================================================================
-    // 1. STATE & PRESET DATABASE (12 Preset Restaurant Ingredients)
-    // =========================================================================
-    let ingredientsDB = [
-      { id: 'ing-1', name: 'US産牛バラブロック', category: '肉類', weight: 1000, unit: 'g', price: 1800, keywords: ['牛肉', '牛バラ', 'ボロネーゼ', 'ミートソース', '肉', 'ビーフ'] },
-      { id: 'ing-2', name: '国産若鶏もも肉', category: '肉類', weight: 2000, unit: 'g', price: 2400, keywords: ['鶏肉', 'チキン', '鶏もも', 'グリルチキン', 'ソテー'] },
-      { id: 'ing-3', name: 'むきエビ (バナメイ)', category: '魚介類', weight: 500, unit: 'g', price: 1200, keywords: ['エビ', '海老', 'シュリンプ', 'シーフード'] },
-      { id: 'ing-4', name: '完熟トマトホール缶', category: '野菜・果物', weight: 2500, unit: 'g', price: 650, keywords: ['トマト', 'トマトソース', 'ボロネーゼ', 'マルゲリータ', 'ピザ', 'パスタ'] },
-      { id: 'ing-5', name: 'モッツァレラチーズ', category: '乳製品・卵', weight: 1000, unit: 'g', price: 1950, keywords: ['チーズ', 'モッツァレラ', 'マルゲリータ', 'ピザ'] },
-      { id: 'ing-6', name: 'デュラム小麦パスタ乾麺', category: '乾物・麺・粉', weight: 5000, unit: 'g', price: 1600, keywords: ['パスタ', 'スパゲッティ', '麺', 'ボロネーゼ'] },
-      { id: 'ing-7', name: 'EXVオリーブオイル', category: '調味料・油', weight: 1000, unit: 'ml', price: 1100, keywords: ['オイル', 'オリーブオイル', '油', 'イタリアン'] },
-      { id: 'ing-8', name: '北海道産 玉ねぎ', category: '野菜・果物', weight: 10000, unit: 'g', price: 1800, keywords: ['玉ねぎ', 'オニオン', '野菜', 'ソテー', 'ボロネーゼ'] },
-      { id: 'ing-9', name: '青森県産 ニンニク', category: '野菜・果物', weight: 500, unit: 'g', price: 600, keywords: ['ニンニク', 'ガーリック', '香り'] },
-      { id: 'ing-10', name: '粗挽きブラックペッパー', category: '調味料・油', weight: 250, unit: 'g', price: 750, keywords: ['ペッパー', '胡椒', 'コショウ', 'スパイス'] },
-      { id: 'ing-11', name: '有機ベビーリーフ', category: '野菜・果物', weight: 200, unit: 'g', price: 480, keywords: ['ベビーリーフ', 'サラダ', '葉物', 'バジル', 'ハーブ', '添え物'] },
-      { id: 'ing-12', name: 'ナポリ風ピザクラスト生地 (22cm・5枚入)', category: '乾物・麺・粉', weight: 900, unit: 'g', price: 1080, keywords: ['ピザ生地', 'クラスト', 'マルゲリータ', 'ピザ'] }
+    // ====== 1. 初期データ（食材マスタ ＆ 自家製仕込み品） ======
+    let ingredientsMaster = [
+      { id: 'ing-1', name: 'ディチェコ スパゲッティ 1.6mm', category: '仕入食材', packageGrams: 5000, packagePrice: 3100, yieldRate: 100 },
+      { id: 'ing-2', name: '合挽きミンチ（牛7:豚3）', category: '仕入食材', packageGrams: 1000, packagePrice: 1480, yieldRate: 95 },
+      { id: 'ing-3', name: '北海道産 玉ねぎ（皮つき）', category: '仕入食材', packageGrams: 10000, packagePrice: 2200, yieldRate: 88 },
+      { id: 'ing-4', name: 'イタリア産 ホールトマト缶', category: '仕入食材', packageGrams: 2550, packagePrice: 820, yieldRate: 100 },
+      { id: 'ing-5', name: '赤ワイン（調理用・BIB）', category: '仕入食材', packageGrams: 3000, packagePrice: 1950, yieldRate: 100 },
+      { id: 'ing-6', name: 'エクストラバージンオリーブ油', category: '仕入食材', packageGrams: 910, packagePrice: 1380, yieldRate: 100 },
+      { id: 'ing-7', name: 'グラナパダーノ（削りチーズ）', category: '仕入食材', packageGrams: 1000, packagePrice: 3200, yieldRate: 100 },
+      { id: 'ing-8', name: '黒毛和牛 うちももブロック（筋引前）', category: '仕入食材', packageGrams: 2000, packagePrice: 11600, yieldRate: 78 },
+      // 仕込みレシピから自動登録された中間加工品サンプル
+      { id: 'prep-1', name: '【自家製仕込】特製ミートソース', category: '仕込み品', packageGrams: 2000, packagePrice: 2160, yieldRate: 100 }
     ];
 
-    // Active recipe rows in the editor
-    let currentRecipeRows = [
-      { rowId: 'r-1', ingId: 'ing-6', amount: 100 }, // パスタ乾麺 100g
-      { rowId: 'r-2', ingId: 'ing-1', amount: 85 },  // US産牛バラ 85g
-      { rowId: 'r-3', ingId: 'ing-4', amount: 90 },  // 完熟トマト缶 90g
-      { rowId: 'r-4', ingId: 'ing-8', amount: 40 },  // 玉ねぎ 40g
-      { rowId: 'r-5', ingId: 'ing-7', amount: 15 },  // オリーブオイル 15ml
-      { rowId: 'r-6', ingId: 'ing-9', amount: 5 },   // ニンニク 5g
-      { rowId: 'r-7', ingId: 'ing-11', amount: 8 },  // ベビーリーフ 8g
-      { rowId: 'r-8', ingId: 'ing-10', amount: 1 }   // ブラックペッパー 1g
-    ];
-
-    // Currently selected sample dish or uploaded base64 image
-    let currentPhotoState = {
-      type: 'sample', // 'sample' | 'upload'
-      sampleKey: 'bolognese',
-      base64Data: null,
-      mimeType: 'image/png',
-      dataUrl: ''
+    // 現在編集中のレシピ状態
+    let currentRecipe = {
+      type: 'menu', // 'menu' (グランドメニュー) or 'prep' (仕込みレシピ)
+      name: '特製ボロネーゼ パスタ',
+      finishedWeight: 320,
+      sellingPrice: 1280,
+      items: [
+        { ingId: 'ing-1', usedGrams: 100, customYield: 100 },
+        { ingId: 'prep-1', usedGrams: 160, customYield: 100 },
+        { ingId: 'ing-6', usedGrams: 15, customYield: 100 },
+        { ingId: 'ing-7', usedGrams: 12, customYield: 100 }
+      ]
     };
 
-    // Parsed wholesale items staging buffer
-    let stagedWholesaleItems = [];
-
-    // Saved Recipes List
+    // 保存済みレシピ一覧
     let savedRecipes = [
       {
         id: 'rec-101',
-        name: '自家製濃厚ボロネーゼパスタ',
-        finishedWeight: 320,
-        sellingPrice: 1280,
-        memo: '1. ニンニクをオリーブオイルで弱火で香り出し。 2. 牛バラと玉ねぎを炒め、完熟トマトホール缶を加えて煮込む。 3. 茹で上げたパスタと和え、仕上げにブラックペッパーとベビーリーフを飾る。',
-        rows: [
-          { ingId: 'ing-6', amount: 100 },
-          { ingId: 'ing-1', amount: 85 },
-          { ingId: 'ing-4', amount: 90 },
-          { ingId: 'ing-8', amount: 40 },
-          { ingId: 'ing-7', amount: 15 },
-          { ingId: 'ing-9', amount: 5 },
-          { ingId: 'ing-11', amount: 8 },
-          { ingId: 'ing-10', amount: 1 }
-        ],
-        updatedAt: '2025/05/12 14:30'
+        type: 'prep',
+        name: '【自家製仕込】特製ミートソース',
+        finishedWeight: 2000,
+        sellingPrice: 0,
+        totalCost: 2160,
+        costPerGram: 1.08,
+        items: [
+          { ingId: 'ing-2', usedGrams: 1000, customYield: 95 },
+          { ingId: 'ing-3', usedGrams: 600, customYield: 88 },
+          { ingId: 'ing-4', usedGrams: 800, customYield: 100 },
+          { ingId: 'ing-5', usedGrams: 200, customYield: 100 }
+        ]
       },
       {
         id: 'rec-102',
-        name: '水牛モッツァレラのマルゲリータピザ',
-        finishedWeight: 350,
-        sellingPrice: 1380,
-        memo: '1. ピザクラストに完熟トマトソースを塗り広げる。 2. モッツァレラチーズを均等に配置し、オリーブオイルを回しかけて高温オーブンで焼成。 3. 焼き上がりにベビーリーフをトッピング。',
-        rows: [
-          { ingId: 'ing-12', amount: 180 },
-          { ingId: 'ing-5', amount: 95 },
-          { ingId: 'ing-4', amount: 70 },
-          { ingId: 'ing-7', amount: 12 },
-          { ingId: 'ing-11', amount: 10 }
-        ],
-        updatedAt: '2025/05/12 15:10'
+        type: 'menu',
+        name: '特製ボロネーゼ パスタ',
+        finishedWeight: 320,
+        sellingPrice: 1280,
+        totalCost: 295,
+        costPerGram: 0.92,
+        items: [
+          { ingId: 'ing-1', usedGrams: 100, customYield: 100 },
+          { ingId: 'prep-1', usedGrams: 160, customYield: 100 },
+          { ingId: 'ing-6', usedGrams: 15, customYield: 100 },
+          { ingId: 'ing-7', usedGrams: 12, customYield: 100 }
+        ]
       }
     ];
 
-    // =========================================================================
-    // 2. SAMPLE DISH SVG / CANVAS GENERATOR (Rich Visuals without external URLs)
-    // =========================================================================
-    const SAMPLE_DISH_CONFIG = {
-      bolognese: {
-        title: '自家製濃厚ボロネーゼパスタ',
-        finishedWeight: 320,
-        sellingPrice: 1280,
-        memo: '1. ニンニクをオリーブオイルで弱火で香り出し。 2. 牛バラと玉ねぎを炒め、完熟トマトホール缶を加えて煮込む。 3. 茹で上げたパスタと和え、仕上げにブラックペッパーとベビーリーフを飾る。',
-        presetRows: [
-          { ingId: 'ing-6', amount: 100 },
-          { ingId: 'ing-1', amount: 85 },
-          { ingId: 'ing-4', amount: 90 },
-          { ingId: 'ing-8', amount: 40 },
-          { ingId: 'ing-7', amount: 15 },
-          { ingId: 'ing-9', amount: 5 },
-          { ingId: 'ing-11', amount: 8 },
-          { ingId: 'ing-10', amount: 1 }
-        ]
-      },
-      margherita: {
-        title: '水牛モッツァレラのマルゲリータピザ',
-        finishedWeight: 350,
-        sellingPrice: 1380,
-        memo: '1. ピザクラスト生地にトマトソースを広げる。 2. モッツァレラチーズとオリーブオイルを乗せ280℃で一気に焼き上げる。 3. 仕上げにフレッシュなベビーリーフを散らす。',
-        presetRows: [
-          { ingId: 'ing-12', amount: 180 },
-          { ingId: 'ing-5', amount: 95 },
-          { ingId: 'ing-4', amount: 70 },
-          { ingId: 'ing-7', amount: 12 },
-          { ingId: 'ing-11', amount: 10 }
-        ]
-      },
-      chicken: {
-        title: '皮パリ若鶏もも肉のハーブグリル サラダ添え',
-        finishedWeight: 290,
-        sellingPrice: 1180,
-        memo: '1. 国産若鶏もも肉にニンニクとブラックペッパーを効かせ、オリーブオイルで皮目からパリッと焼き上げる。 2. 炒めた玉ねぎと完熟トマトのソースを添え、有機ベビーリーフを盛り付ける。',
-        presetRows: [
-          { ingId: 'ing-2', amount: 220 },
-          { ingId: 'ing-11', amount: 25 },
-          { ingId: 'ing-4', amount: 40 },
-          { ingId: 'ing-8', amount: 30 },
-          { ingId: 'ing-7', amount: 12 },
-          { ingId: 'ing-9', amount: 6 },
-          { ingId: 'ing-10', amount: 2 }
-        ]
-      }
-    };
-
-    function generateSampleDishDataUrl(type) {
-      const canvas = document.createElement('canvas');
-      canvas.width = 640;
-      canvas.height = 400;
-      const ctx = canvas.getContext('2d');
-
-      // Warm restaurant table background
-      const bgGrad = ctx.createLinearGradient(0, 0, 640, 400);
-      bgGrad.addColorStop(0, '#1e293b');
-      bgGrad.addColorStop(1, '#0f172a');
-      ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, 640, 400);
-
-      // Subtle wooden texture lines
-      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-      ctx.lineWidth = 2;
-      for (let y = 20; y < 400; y += 35) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(640, y);
-        ctx.stroke();
-      }
-
-      // Ceramic Plate shadow & rim
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(320, 200, 165, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0,0,0,0.45)';
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.arc(320, 195, 160, 0, Math.PI * 2);
-      ctx.fillStyle = '#f8fafc';
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.arc(320, 195, 132, 0, Math.PI * 2);
-      ctx.strokeStyle = '#e2e8f0';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      if (type === 'bolognese') {
-        // Pasta nest
-        ctx.fillStyle = '#facc15';
-        ctx.beginPath();
-        ctx.arc(320, 195, 105, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Spaghetti strands
-        ctx.strokeStyle = '#eab308';
-        ctx.lineWidth = 5;
-        for (let i = 0; i < 28; i++) {
-          ctx.beginPath();
-          ctx.arc(320 + Math.sin(i) * 18, 195 + Math.cos(i) * 18, 40 + (i % 5) * 12, i * 0.4, i * 0.4 + 2.2);
-          ctx.stroke();
-        }
-
-        // Rich Bolognese meat sauce
-        ctx.fillStyle = '#991b1b';
-        ctx.beginPath();
-        ctx.arc(320, 192, 68, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Beef chunks
-        const chunks = [[-25,-15],[20,-20],[0,15],[-30,20],[30,15],[-10,-32],[15,32]];
-        chunks.forEach(([dx, dy]) => {
-          ctx.fillStyle = '#7f1d1d';
-          ctx.beginPath();
-          ctx.arc(320 + dx, 192 + dy, 12, 0, Math.PI * 2);
-          ctx.fill();
-        });
-
-        // Baby leaf garnish on top
-        ctx.fillStyle = '#16a34a';
-        ctx.beginPath();
-        ctx.ellipse(310, 185, 18, 9, -0.4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(332, 192, 16, 8, 0.5, 0, Math.PI * 2);
-        ctx.fill();
-
-      } else if (type === 'margherita') {
-        // Pizza crust
-        ctx.fillStyle = '#d97706';
-        ctx.beginPath();
-        ctx.arc(320, 195, 130, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Tomato sauce base
-        ctx.fillStyle = '#dc2626';
-        ctx.beginPath();
-        ctx.arc(320, 195, 112, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Melted Mozzarella patches
-        ctx.fillStyle = '#fef9c3';
-        const cheesePos = [[0,0,28],[-55,-40,24],[55,-35,25],[-50,45,26],[55,45,24],[0,-68,20],[0,68,22],[-68,0,20],[68,0,20]];
-        cheesePos.forEach(([dx, dy, r]) => {
-          ctx.beginPath();
-          ctx.arc(320 + dx, 195 + dy, r, 0, Math.PI * 2);
-          ctx.fill();
-        });
-
-        // Fresh Green Leaves
-        ctx.fillStyle = '#15803d';
-        const leafPos = [[-25,-20],[30,-15],[-20,30],[28,25],[0,-35]];
-        leafPos.forEach(([dx, dy], idx) => {
-          ctx.beginPath();
-          ctx.ellipse(320 + dx, 195 + dy, 15, 8, idx * 0.6, 0, Math.PI * 2);
-          ctx.fill();
-        });
-
-      } else if (type === 'chicken') {
-        // Baby leaf salad bed
-        ctx.fillStyle = '#22c55e';
-        for (let i = 0; i < 12; i++) {
-          const angle = (i / 12) * Math.PI * 2;
-          ctx.beginPath();
-          ctx.ellipse(275 + Math.cos(angle) * 55, 175 + Math.sin(angle) * 45, 22, 12, angle, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        // Red tomato salsa side
-        ctx.fillStyle = '#ef4444';
-        ctx.beginPath();
-        ctx.arc(385, 155, 36, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Golden Roasted Chicken Thigh
-        ctx.fillStyle = '#b45309';
-        ctx.beginPath();
-        ctx.ellipse(320, 215, 82, 52, -0.15, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Crispy grill marks
-        ctx.strokeStyle = '#451a03';
-        ctx.lineWidth = 4;
-        for (let x = -45; x <= 45; x += 22) {
-          ctx.beginPath();
-          ctx.moveTo(320 + x - 12, 185);
-          ctx.lineTo(320 + x + 12, 245);
-          ctx.stroke();
-        }
-      }
-
-      ctx.restore();
-      return canvas.toDataURL('image/png');
+    // ====== 2. 計算ユーティリティ ======
+    function getBaseUnitCost(ing) {
+      return ing.packagePrice / ing.packageGrams;
     }
 
-    // =========================================================================
-    // 3. HELPER FUNCTIONS: UNIT COST & FORMATTING
-    // =========================================================================
-    function getUnitPrice(ing) {
-      if (!ing || !ing.weight || ing.weight <= 0) return 0;
-      return ing.price / ing.weight;
+    function getEffectiveUnitCost(ing, yieldRate) {
+      const base = getBaseUnitCost(ing);
+      const validYield = Math.max(1, Math.min(100, Number(yieldRate) || 100));
+      return base / (validYield / 100);
     }
 
-    function formatUnitPrice(val) {
-      return Number(val || 0).toFixed(2);
-    }
-
-    function showToast(message, type = 'success') {
-      const container = document.getElementById('toast-container');
-      const toast = document.createElement('div');
-      const icon = type === 'success' ? 'fa-circle-check text-emerald-400'
-                 : type === 'info' ? 'fa-wand-magic-sparkles text-amber-400'
-                 : 'fa-triangle-exclamation text-rose-400';
-
-      toast.className = 'pointer-events-auto flex items-center gap-3 bg-navy-900 text-white px-4 py-3 rounded-xl shadow-xl border border-slate-700 text-xs sm:text-sm transform transition-all duration-300 translate-y-2 opacity-0';
-      toast.innerHTML = `
-        <i class="fa-solid ${icon} text-base shrink-0"></i>
-        <span class="font-medium leading-snug">${message}</span>
-      `;
-      container.appendChild(toast);
-
-      requestAnimationFrame(() => {
-        toast.classList.remove('translate-y-2', 'opacity-0');
-      });
-
-      setTimeout(() => {
-        toast.classList.add('opacity-0', 'translate-y-2');
-        setTimeout(() => toast.remove(), 300);
-      }, 3600);
-    }
-
-    // =========================================================================
-    // 4. TAB NAVIGATION
-    // =========================================================================
-    function switchTab(tabKey) {
-      const tabs = ['recipe', 'database', 'saved'];
-      tabs.forEach(k => {
-        const section = document.getElementById(`tab-${k}`);
-        const btn = document.getElementById(`tab-btn-${k}`);
-        if (k === tabKey) {
-          section.classList.remove('hidden');
-          btn.className = 'tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm';
-        } else {
-          section.classList.add('hidden');
-          btn.className = 'tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap text-slate-300 hover:text-white hover:bg-slate-700/60';
-        }
-      });
-
-      if (tabKey === 'database') renderIngredientDatabase();
-      if (tabKey === 'saved') renderSavedRecipes();
-      if (tabKey === 'recipe') {
-        renderRecipeTable();
-        recalculateRecipe();
-      }
-    }
-
-    // =========================================================================
-    // 5. Gemini API CALL WITH EXPONENTIAL BACKOFF
-    // =========================================================================
-    async function callGeminiAPI(payload) {
-      const apiKey = "";
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-      const delays = [1000, 2000, 4000];
-
-      for (let attempt = 0; attempt <= delays.length; attempt++) {
-        try {
-          const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-          return await response.json();
-        } catch (err) {
-          if (attempt === delays.length) {
-            throw err;
-          }
-          await new Promise(res => setTimeout(res, delays[attempt]));
-        }
-      }
-    }
-
-    // =========================================================================
-    // 6. STEP 1: PHOTO UPLOAD & SAMPLE DISH HANDLING + AI PICKUP
-    // =========================================================================
-    function selectSampleDish(sampleKey) {
-      const config = SAMPLE_DISH_CONFIG[sampleKey];
-      if (!config) return;
-
-      const dataUrl = generateSampleDishDataUrl(sampleKey);
-      const base64Data = dataUrl.split(',')[1];
-
-      currentPhotoState = {
-        type: 'sample',
-        sampleKey: sampleKey,
-        base64Data: base64Data,
-        mimeType: 'image/png',
-        dataUrl: dataUrl
-      };
-
-      // Highlight active sample button
-      document.querySelectorAll('.sample-dish-btn').forEach(btn => {
-        btn.classList.remove('ring-2', 'ring-orange-500', 'bg-orange-50', 'border-orange-500');
-      });
-      const activeBtn = document.getElementById(`sample-btn-${sampleKey}`);
-      if (activeBtn) {
-        activeBtn.classList.add('ring-2', 'ring-orange-500', 'bg-orange-50', 'border-orange-500');
-      }
-
-      // Show image preview
-      document.getElementById('photo-empty-state').classList.add('hidden');
-      document.getElementById('photo-preview-container').classList.remove('hidden');
-      document.getElementById('dish-preview-img').src = dataUrl;
-      document.getElementById('photo-badge-label').innerHTML = `<i class="fa-solid fa-wand-magic-sparkles text-amber-400 mr-1"></i>サンプル料理画像セット済`;
-      document.getElementById('photo-dish-caption').textContent = config.title;
-
-      // Immediately run AI pickup experience so the user sees instant magic
-      runAIPhotoPickup();
-    }
-
-    function handleDragOver(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      document.getElementById('photo-dropzone').classList.add('border-orange-500', 'bg-orange-50/40');
-    }
-
-    function handleDragLeave(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      document.getElementById('photo-dropzone').classList.remove('border-orange-500', 'bg-orange-50/40');
-    }
-
-    function handleDrop(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      document.getElementById('photo-dropzone').classList.remove('border-orange-500', 'bg-orange-50/40');
-      const file = e.dataTransfer?.files?.[0];
-      if (file) processUploadedImageFile(file);
-    }
-
-    function handleFileSelect(e) {
-      const file = e.target.files?.[0];
-      if (file) processUploadedImageFile(file);
-    }
-
-    function processUploadedImageFile(file) {
-      if (!file.type.startsWith('image/')) {
-        showToast('画像ファイル（JPG/PNG/WebP等）を選択してください', 'error');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = function(ev) {
-        const dataUrl = ev.target.result;
-        const base64Data = dataUrl.split(',')[1];
-        currentPhotoState = {
-          type: 'upload',
-          sampleKey: null,
-          base64Data: base64Data,
-          mimeType: file.type || 'image/jpeg',
-          dataUrl: dataUrl
-        };
-
-        document.querySelectorAll('.sample-dish-btn').forEach(btn => {
-          btn.classList.remove('ring-2', 'ring-orange-500', 'bg-orange-50', 'border-orange-500');
-        });
-
-        document.getElementById('photo-empty-state').classList.add('hidden');
-        document.getElementById('photo-preview-container').classList.remove('hidden');
-        document.getElementById('dish-preview-img').src = dataUrl;
-        document.getElementById('photo-badge-label').innerHTML = `<i class="fa-solid fa-camera text-emerald-400 mr-1"></i>アップロード画像セット完了`;
-        document.getElementById('photo-dish-caption').textContent = file.name.replace(/\.[^/.]+$/, "");
-
-        showToast('料理写真を読み込みました！「AI自動ピックアップ」を実行します', 'info');
-        runAIPhotoPickup();
-      };
-      reader.readAsDataURL(file);
-    }
-
-    async function runAIPhotoPickup() {
-      const btn = document.getElementById('btn-ai-pickup');
-      const statusBox = document.getElementById('ai-pickup-status');
-      const statusTitle = document.getElementById('ai-status-title');
-      const statusBadge = document.getElementById('ai-status-badge');
-      const statusDesc = document.getElementById('ai-status-desc');
-      const hintText = document.getElementById('ai-photo-hint').value.trim();
-
-      if (!currentPhotoState.base64Data) {
-        // Default to bolognese sample if none selected yet
-        selectSampleDish('bolognese');
-        return;
-      }
-
-      // Show loading state
-      btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>AIが料理写真とお店の登録食材マスタを照合中...</span>`;
-      statusBox.classList.remove('hidden');
-      statusTitle.textContent = 'Gemini Vision AI が食材を解析中...';
-      statusBadge.className = 'px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-semibold';
-      statusBadge.textContent = '解析中';
-      statusDesc.textContent = `店舗データベースに登録されている全 ${ingredientsDB.length} 品目の食材から、写真に使用されている食材と推定グラム数を算出しています...`;
-
-      try {
-        // Prepare the registered ingredients list for the prompt
-        const dbSummary = ingredientsDB.map(item => ({
-          ingId: item.id,
-          name: item.name,
-          category: item.category,
-          unit: item.unit
-        }));
-
-        const promptText = `あなたはプロの飲食店シェフ兼原価管理AIです。
-添付された料理の完成写真（および補足ヒント: "${hintText || '特になし'}"）を分析し、以下の【店舗登録済み食材リスト】の中から、この料理に使われている可能性が高い食材をすべて選び出し、1人前あたりのおおよその使用量(gまたはml)と推定メニュー名、仕上がり量(g)、推奨税抜売価(円)をJSON形式で出力してください。
-
-【店舗登録済み食材リスト】
-${JSON.stringify(dbSummary)}
-
-必ず登録済みリストに存在する ingId のみを使用してください。`;
-
-        const payload = {
-          contents: [
-            {
-              role: "user",
-              parts: [
-                { text: promptText },
-                {
-                  inlineData: {
-                    mimeType: currentPhotoState.mimeType,
-                    data: currentPhotoState.base64Data
-                  }
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "OBJECT",
-              properties: {
-                dishName: { type: "STRING" },
-                finishedWeightGrams: { type: "INTEGER" },
-                suggestedSellingPriceYen: { type: "INTEGER" },
-                reasoning: { type: "STRING" },
-                ingredients: {
-                  type: "ARRAY",
-                  items: {
-                    type: "OBJECT",
-                    properties: {
-                      ingId: { type: "STRING" },
-                      amount: { type: "INTEGER" }
-                    },
-                    propertyOrdering: ["ingId", "amount"]
-                  }
-                }
-              },
-              propertyOrdering: ["dishName", "finishedWeightGrams", "suggestedSellingPriceYen", "reasoning", "ingredients"]
-            }
-          }
-        };
-
-        // If it's a preset sample and no custom hint is added, we can still call Gemini OR blend nicely for instant responsiveness
-        const apiResult = await callGeminiAPI(payload);
-        const jsonText = apiResult?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!jsonText) throw new Error('Empty AI response');
-
-        const parsed = JSON.parse(jsonText);
-        const validIngredients = (parsed.ingredients || []).filter(item =>
-          ingredientsDB.some(db => db.id === item.ingId)
-        );
-
-        if (validIngredients.length === 0) {
-          throw new Error('No matching ingredients found in AI output');
-        }
-
-        // Apply AI results to Recipe Editor
-        if (parsed.dishName) {
-          document.getElementById('recipe-name-input').value = parsed.dishName;
-        }
-        if (parsed.finishedWeightGrams) {
-          document.getElementById('recipe-finished-weight').value = parsed.finishedWeightGrams;
-        }
-        if (parsed.suggestedSellingPriceYen) {
-          document.getElementById('recipe-selling-price').value = parsed.suggestedSellingPriceYen;
-        }
-
-        currentRecipeRows = validIngredients.map((item, idx) => ({
-          rowId: `r-ai-${Date.now()}-${idx}`,
-          ingId: item.ingId,
-          amount: Math.max(1, Number(item.amount) || 20)
-        }));
-
-        renderRecipeTable();
-        recalculateRecipe();
-
-        statusTitle.textContent = 'AI食材ピックアップ完了';
-        statusBadge.className = 'px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold';
-        statusBadge.textContent = `${validIngredients.length}品目を自動反映`;
-        statusDesc.textContent = parsed.reasoning || `料理画像から登録マスタ内の食材 ${validIngredients.length} 品目を特定し、レシピ表に反映しました。実際の使用グラム数を微調整してください。`;
-
-        showToast(`写真から ${validIngredients.length} 品目の登録食材を自動ピックアップしました！`, 'success');
-
-      } catch (err) {
-        // Reliable Smart Fallback using Sample Dish Config or Hint Keyword Matching
-        applyFallbackPhotoPickup(hintText);
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i><span>写真からお店の登録食材をAI自動ピックアップ</span>`;
-      }
-    }
-
-    function applyFallbackPhotoPickup(hintText) {
-      const statusTitle = document.getElementById('ai-status-title');
-      const statusBadge = document.getElementById('ai-status-badge');
-      const statusDesc = document.getElementById('ai-status-desc');
-
-      let selectedConfig = SAMPLE_DISH_CONFIG[currentPhotoState.sampleKey || 'bolognese'];
-      let matchedRows = [...selectedConfig.presetRows];
-
-      // Also check if user typed any hint keyword matching other registered ingredients
-      if (hintText) {
-        ingredientsDB.forEach(ing => {
-          const hit = hintText.includes(ing.name) || (ing.keywords && ing.keywords.some(k => hintText.includes(k)));
-          if (hit && !matchedRows.some(r => r.ingId === ing.id)) {
-            matchedRows.push({ ingId: ing.id, amount: 30 });
-          }
-        });
-      }
-
-      document.getElementById('recipe-name-input').value = selectedConfig.title;
-      document.getElementById('recipe-finished-weight').value = selectedConfig.finishedWeight;
-      document.getElementById('recipe-selling-price').value = selectedConfig.sellingPrice;
-      document.getElementById('recipe-memo-input').value = selectedConfig.memo;
-
-      currentRecipeRows = matchedRows
-        .filter(r => ingredientsDB.some(db => db.id === r.ingId))
-        .map((r, idx) => ({
-          rowId: `r-fb-${Date.now()}-${idx}`,
-          ingId: r.ingId,
-          amount: r.amount
-        }));
-
+    // ====== 3. 画面描画と更新 ======
+    function initApp() {
+      renderMasterTable();
+      renderIngredientSelect();
       renderRecipeTable();
-      recalculateRecipe();
-
-      statusTitle.textContent = 'AI食材ピックアップ完了';
-      statusBadge.className = 'px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold';
-      statusBadge.textContent = `${currentRecipeRows.length}品目を自動反映`;
-      statusDesc.textContent = `完成図のビジュアル特徴と店舗の登録食材データベースを照合し、該当する ${currentRecipeRows.length} 品目をレシピ表へ自動セットしました。`;
-
-      showToast(`写真から ${currentRecipeRows.length} 品目の登録食材を自動ピックアップしました！`, 'success');
+      renderSavedRecipes();
     }
 
-    // =========================================================================
-    // 7. STEP 2 & 3: RECIPE TABLE RENDERING & REAL-TIME COST CALCULATION
-    // =========================================================================
+    // タブ切り替え
+    function switchTab(tab) {
+      ['recipe', 'ingredients', 'saved'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById(`tab-${t}`);
+        if (t === tab) {
+          btn.className = 'px-4 py-2 rounded-md font-medium bg-amber-500 text-slate-900 transition';
+        } else {
+          btn.className = 'px-4 py-2 rounded-md font-medium text-slate-300 hover:text-white transition';
+        }
+      });
+    }
+
+    // レシピ種別切り替え（グランドメニュー / 仕込みレシピ）
+    function changeRecipeType(type) {
+      currentRecipe.type = type;
+      const isPrep = type === 'prep';
+      document.getElementById('prep-notice').classList.toggle('hidden', !isPrep);
+      document.getElementById('selling-price-wrap').classList.toggle('hidden', isPrep);
+      document.getElementById('profit-card').classList.toggle('opacity-40', isPrep);
+
+      const badge = document.getElementById('badge-recipe-type');
+      if (isPrep) {
+        badge.textContent = '仕込みレシピ（中間加工品）';
+        badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded bg-indigo-100 text-indigo-800';
+        document.getElementById('label-type-prep').className = 'flex items-center space-x-2 cursor-pointer bg-indigo-50 px-4 py-2 rounded-lg border-2 border-indigo-600';
+        document.getElementById('label-type-menu').className = 'flex items-center space-x-2 cursor-pointer bg-slate-100 px-4 py-2 rounded-lg border-2 border-transparent';
+      } else {
+        badge.textContent = 'グランドメニュー';
+        badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded bg-amber-100 text-amber-800';
+        document.getElementById('label-type-menu').className = 'flex items-center space-x-2 cursor-pointer bg-amber-50 px-4 py-2 rounded-lg border-2 border-amber-500';
+        document.getElementById('label-type-prep').className = 'flex items-center space-x-2 cursor-pointer bg-slate-100 px-4 py-2 rounded-lg border-2 border-transparent';
+      }
+      recalculateRecipe();
+    }
+
+    // レシピ表の行描画
     function renderRecipeTable() {
-      const tbody = document.getElementById('recipe-rows-tbody');
+      const tbody = document.getElementById('recipe-rows');
       tbody.innerHTML = '';
 
-      if (currentRecipeRows.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="5" class="py-8 text-center text-slate-400 text-xs">
-              食材が選択されていません。上の「写真からAI自動ピックアップ」または下の「＋登録食材から行を追加」を押してください。
-            </td>
-          </tr>
-        `;
-        return;
-      }
-
-      currentRecipeRows.forEach((row, index) => {
-        const ing = ingredientsDB.find(item => item.id === row.ingId) || ingredientsDB[0];
+      currentRecipe.items.forEach((item, index) => {
+        const ing = ingredientsMaster.find(m => m.id === item.ingId);
         if (!ing) return;
-        row.ingId = ing.id;
 
-        const unitCost = getUnitPrice(ing);
-        const rowCost = unitCost * (Number(row.amount) || 0);
+        const baseUnitCost = getBaseUnitCost(ing);
+        const yieldVal = item.customYield !== undefined ? item.customYield : ing.yieldRate;
+        const effectiveCost = getEffectiveUnitCost(ing, yieldVal);
+        const rowCost = effectiveCost * item.usedGrams;
 
-        const optionsHtml = ingredientsDB.map(dbItem => {
-          const uPrice = formatUnitPrice(getUnitPrice(dbItem));
-          const selected = dbItem.id === row.ingId ? 'selected' : '';
-          return `<option value="${dbItem.id}" ${selected}>${dbItem.name} (@¥${uPrice}/${dbItem.unit})</option>`;
-        }).join('');
+        const isPrepItem = ing.category === '仕込み品';
+        const badgeHtml = isPrepItem
+          ? `<span class="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded mr-1">仕込み品</span>`
+          : `<span class="text-[10px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded mr-1">仕入食材</span>`;
 
         const tr = document.createElement('tr');
-        tr.className = 'hover:bg-orange-50/30 transition-colors';
+        tr.className = 'hover:bg-slate-50 transition';
         tr.innerHTML = `
-          <td class="py-2.5 px-3">
-            <select onchange="handleRowIngChange('${row.rowId}', this.value)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-xs sm:text-sm font-semibold text-slate-800 bg-white">
-              ${optionsHtml}
-            </select>
+          <td class="py-2.5 px-2 font-medium text-slate-800">
+            ${badgeHtml}${ing.name}
           </td>
-          <td class="py-2.5 px-2 text-right font-mono text-xs text-slate-500 whitespace-nowrap">
-            ¥<span id="row-unit-${row.rowId}">${formatUnitPrice(unitCost)}</span>/${ing.unit}
-          </td>
-          <td class="py-2.5 px-3">
-            <div class="flex items-center justify-center gap-1">
-              <button type="button" onclick="adjustRowAmount('${row.rowId}', -5)" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center transition-colors" title="-5">-5</button>
-              <div class="relative w-20">
-                <input type="number" min="0" step="1" value="${row.amount}"
-                       oninput="handleRowAmountInput('${row.rowId}', this.value)"
-                       id="row-input-${row.rowId}"
-                       class="w-full pl-2 pr-6 py-1 rounded-lg border border-slate-300 text-right font-bold text-slate-900 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" />
-                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-400">${ing.unit}</span>
-              </div>
-              <button type="button" onclick="adjustRowAmount('${row.rowId}', 5)" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center transition-colors" title="+5">+5</button>
-            </div>
-          </td>
-          <td class="py-2.5 px-3 text-right font-bold text-slate-900 whitespace-nowrap">
-            ¥<span id="row-subtotal-${row.rowId}">${rowCost.toFixed(1)}</span>
+          <td class="py-2.5 px-2 text-right text-xs text-slate-500 font-mono">
+            ¥${baseUnitCost.toFixed(2)}
           </td>
           <td class="py-2.5 px-2 text-center">
-            <button type="button" onclick="removeRecipeRow('${row.rowId}')" class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 inline-flex items-center justify-center transition-colors">
-              <i class="fa-solid fa-xmark"></i>
+            <div class="inline-flex items-center border border-slate-300 rounded px-1.5 py-0.5 bg-white">
+              <input type="number" value="${yieldVal}" min="1" max="100"
+                oninput="updateRowYield(${index}, this.value)"
+                class="w-12 text-right text-xs font-bold focus:outline-none">
+              <span class="text-[10px] text-slate-400 ml-0.5">%</span>
+            </div>
+          </td>
+          <td class="py-2.5 px-2 text-right text-xs font-bold text-slate-700 font-mono">
+            ¥${effectiveCost.toFixed(2)}
+          </td>
+          <td class="py-2.5 px-2 text-center">
+            <div class="inline-flex items-center border-2 border-amber-400 rounded-md px-2 py-0.5 bg-amber-50/30">
+              <input type="number" value="${item.usedGrams}" min="0"
+                oninput="updateRowGrams(${index}, this.value)"
+                class="w-14 text-right text-sm font-bold text-slate-900 bg-transparent focus:outline-none">
+              <span class="text-xs text-slate-500 ml-1">g</span>
+            </div>
+          </td>
+          <td class="py-2.5 px-2 text-right font-bold text-slate-900 font-mono">
+            ¥${Math.round(rowCost).toLocaleString()}
+          </td>
+          <td class="py-2.5 px-2 text-center no-print">
+            <button onclick="removeRecipeRow(${index})" class="text-slate-400 hover:text-rose-500 transition">
+              <i class="fa-solid fa-trash-can"></i>
             </button>
           </td>
         `;
         tbody.appendChild(tr);
       });
+
+      recalculateRecipe();
     }
 
-    function handleRowIngChange(rowId, newIngId) {
-      const row = currentRecipeRows.find(r => r.rowId === rowId);
-      if (!row) return;
-      row.ingId = newIngId;
+    function updateRowYield(index, val) {
+      currentRecipe.items[index].customYield = Number(val) || 100;
       renderRecipeTable();
-      recalculateRecipe();
     }
 
-    function handleRowAmountInput(rowId, val) {
-      const row = currentRecipeRows.find(r => r.rowId === rowId);
-      if (!row) return;
-      row.amount = Math.max(0, Number(val) || 0);
-
-      // Update row subtotal immediately without re-rendering full DOM so input keeps focus
-      const ing = ingredientsDB.find(item => item.id === row.ingId);
-      if (ing) {
-        const subEl = document.getElementById(`row-subtotal-${rowId}`);
-        if (subEl) {
-          subEl.textContent = (getUnitPrice(ing) * row.amount).toFixed(1);
-        }
-      }
-      recalculateRecipe();
+    function updateRowGrams(index, val) {
+      currentRecipe.items[index].usedGrams = Number(val) || 0;
+      renderRecipeTable();
     }
 
-    function adjustRowAmount(rowId, delta) {
-      const row = currentRecipeRows.find(r => r.rowId === rowId);
-      if (!row) return;
-      row.amount = Math.max(0, (Number(row.amount) || 0) + delta);
-      const inputEl = document.getElementById(`row-input-${rowId}`);
-      if (inputEl) inputEl.value = row.amount;
-      handleRowAmountInput(rowId, row.amount);
+    function removeRecipeRow(index) {
+      currentRecipe.items.splice(index, 1);
+      renderRecipeTable();
     }
 
-    function addRecipeRow() {
-      if (ingredientsDB.length === 0) {
-        showToast('食材マスタが空です。先に食材を登録してください', 'error');
-        return;
-      }
-      // Pick an ingredient not yet in the recipe if possible
-      const unused = ingredientsDB.find(db => !currentRecipeRows.some(r => r.ingId === db.id)) || ingredientsDB[0];
-      currentRecipeRows.push({
-        rowId: `r-manual-${Date.now()}`,
-        ingId: unused.id,
-        amount: 20
+    function addIngredientRow() {
+      const select = document.getElementById('add-ingredient-select');
+      const ingId = select.value;
+      const ing = ingredientsMaster.find(m => m.id === ingId);
+      if (!ing) return;
+
+      currentRecipe.items.push({
+        ingId: ing.id,
+        usedGrams: 50,
+        customYield: ing.yieldRate
       });
       renderRecipeTable();
-      recalculateRecipe();
     }
 
-    function removeRecipeRow(rowId) {
-      currentRecipeRows = currentRecipeRows.filter(r => r.rowId !== rowId);
-      renderRecipeTable();
-      recalculateRecipe();
-    }
-
-    function clearRecipeRows() {
-      currentRecipeRows = [];
-      renderRecipeTable();
-      recalculateRecipe();
-    }
-
+    // 原価・原価率のリアルタイム再計算
     function recalculateRecipe() {
       let totalCost = 0;
-      let totalRawWeight = 0;
-
-      currentRecipeRows.forEach(row => {
-        const ing = ingredientsDB.find(item => item.id === row.ingId);
-        if (ing) {
-          const amount = Math.max(0, Number(row.amount) || 0);
-          totalCost += getUnitPrice(ing) * amount;
-          totalRawWeight += amount;
-        }
+      currentRecipe.items.forEach(item => {
+        const ing = ingredientsMaster.find(m => m.id === item.ingId);
+        if (!ing) return;
+        const yieldVal = item.customYield !== undefined ? item.customYield : ing.yieldRate;
+        const effectiveCost = getEffectiveUnitCost(ing, yieldVal);
+        totalCost += effectiveCost * item.usedGrams;
       });
 
-      const finishedWeight = Math.max(1, Number(document.getElementById('recipe-finished-weight').value) || 1);
-      const sellingPriceEx = Math.max(1, Number(document.getElementById('recipe-selling-price').value) || 1);
-      const sellingPriceInc = Math.round(sellingPriceEx * 1.1);
+      const finishedWeight = Math.max(1, Number(document.getElementById('finished-weight').value) || 1);
+      const sellingPrice = Math.max(1, Number(document.getElementById('selling-price').value) || 1);
 
       const costPerGram = totalCost / finishedWeight;
-      const costRatioEx = (totalCost / sellingPriceEx) * 100;
-      const costRatioInc = (totalCost / sellingPriceInc) * 100;
-      const grossProfit = sellingPriceEx - totalCost;
-      const grossMargin = 100 - costRatioEx;
-      const yieldRate = totalRawWeight > 0 ? Math.round((finishedWeight / totalRawWeight) * 100) : 100;
+      const costRate = (totalCost / sellingPrice) * 100;
+      const grossProfit = sellingPrice - totalCost;
 
-      // Update Table Footer
-      document.getElementById('table-total-weight').textContent = totalRawWeight.toLocaleString();
-      document.getElementById('table-total-cost').textContent = totalCost.toFixed(1);
-      document.getElementById('price-inc-tax-label').textContent = `¥${sellingPriceInc.toLocaleString()}`;
+      document.getElementById('total-cost').textContent = Math.round(totalCost).toLocaleString();
+      document.getElementById('cost-per-gram').textContent = costPerGram.toFixed(2);
+      document.getElementById('cost-rate').textContent = costRate.toFixed(1);
+      document.getElementById('gross-profit').textContent = Math.round(grossProfit).toLocaleString();
 
-      // Update Dashboard KPI Cards with subtle pop animation
-      const costEl = document.getElementById('kpi-total-cost');
-      costEl.textContent = `¥${totalCost.toFixed(1)}`;
-      document.getElementById('kpi-cost-per-gram').textContent = `¥${costPerGram.toFixed(2)}`;
-
-      const ratioEl = document.getElementById('kpi-cost-ratio');
-      ratioEl.textContent = `${costRatioEx.toFixed(1)}%`;
-      document.getElementById('kpi-cost-ratio-inc').textContent = `${costRatioInc.toFixed(1)}%`;
-
-      document.getElementById('kpi-gross-profit').textContent = `¥${Math.round(grossProfit).toLocaleString()}`;
-      document.getElementById('kpi-gross-margin').textContent = `${Math.max(0, grossMargin).toFixed(1)}%`;
-
-      document.getElementById('kpi-finished-weight').textContent = finishedWeight.toLocaleString();
-      document.getElementById('kpi-raw-total-weight').textContent = `${totalRawWeight}g`;
-      document.getElementById('kpi-yield-rate').textContent = yieldRate;
-
-      // Gauge & Status Evaluation
-      const statusPill = document.getElementById('cost-status-pill');
-      const gaugeBar = document.getElementById('cost-gauge-bar');
-      const clampedWidth = Math.min(100, Math.max(4, (costRatioEx / 50) * 100));
-      gaugeBar.style.width = `${clampedWidth}%`;
-
-      if (costRatioEx < 25) {
-        ratioEl.className = 'text-xl sm:text-2xl font-extrabold text-sky-400 mt-1 tracking-tight';
-        statusPill.className = 'px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 bg-sky-500/20 text-sky-300 border border-sky-500/30';
-        statusPill.innerHTML = `<i class="fa-solid fa-star"></i><span>優良（高収益メニュー：25%未満）</span>`;
-      } else if (costRatioEx <= 32) {
-        ratioEl.className = 'text-xl sm:text-2xl font-extrabold text-emerald-400 mt-1 tracking-tight';
-        statusPill.className = 'px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
-        statusPill.innerHTML = `<i class="fa-solid fa-circle-check"></i><span>適正原価レンジ (25%〜32%)</span>`;
-      } else if (costRatioEx <= 38) {
-        ratioEl.className = 'text-xl sm:text-2xl font-extrabold text-amber-400 mt-1 tracking-tight';
-        statusPill.className = 'px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/30';
-        statusPill.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i><span>注意（やや高め：32%〜38%）</span>`;
+      const badge = document.getElementById('cost-rate-badge');
+      if (costRate <= 30) {
+        badge.textContent = '優秀 (〜30%)';
+        badge.className = 'text-xs font-bold px-2 py-1 rounded bg-emerald-100 text-emerald-800';
+      } else if (costRate <= 35) {
+        badge.textContent = '標準 (30〜35%)';
+        badge.className = 'text-xs font-bold px-2 py-1 rounded bg-amber-100 text-amber-800';
       } else {
-        ratioEl.className = 'text-xl sm:text-2xl font-extrabold text-rose-400 mt-1 tracking-tight';
-        statusPill.className = 'px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 bg-rose-500/20 text-rose-300 border border-rose-500/30';
-        statusPill.innerHTML = `<i class="fa-solid fa-bell"></i><span>要改善（原価過多：38%以上）</span>`;
+        badge.textContent = '原価高 (35%超)';
+        badge.className = 'text-xs font-bold px-2 py-1 rounded bg-rose-100 text-rose-800';
       }
+    }
 
-      // Update Target Cost Ratio Simulator
-      const targetRatio = Number(document.getElementById('target-ratio-slider').value) || 30;
-      const recPriceEx = totalCost > 0 ? Math.ceil((totalCost / (targetRatio / 100)) / 10) * 10 : 0;
-      const recPriceInc = Math.round(recPriceEx * 1.1);
-      const diff = recPriceEx - sellingPriceEx;
+    // ====== 4. 写真アップロード＆AIピックアップシミュレーション ======
+    function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('photo-preview').src = e.target.result;
+        document.getElementById('photo-placeholder').classList.add('hidden');
+        document.getElementById('photo-preview-wrap').classList.remove('hidden');
+        // 写真アップロード時に自動でサンプル抽出を実行
+        loadPresetRecipe('bolognese', false);
+      };
+      reader.readAsDataURL(file);
+    }
 
-      document.getElementById('recommended-price-ex').textContent = recPriceEx.toLocaleString();
-      document.getElementById('recommended-price-inc').textContent = recPriceInc.toLocaleString();
-      const diffEl = document.getElementById('recommended-diff-label');
-      if (diff > 0) {
-        diffEl.textContent = `+${diff.toLocaleString()}円`;
-        diffEl.className = 'text-amber-600 font-semibold';
-      } else if (diff < 0) {
-        diffEl.textContent = `${diff.toLocaleString()}円`;
-        diffEl.className = 'text-emerald-600 font-semibold';
+    function loadPresetRecipe(presetKey, updatePhoto = true) {
+      if (presetKey === 'bolognese') {
+        document.querySelector('input[name="recipeType"][value="menu"]').checked = true;
+        changeRecipeType('menu');
+        document.getElementById('recipe-name').value = '特製ボロネーゼ パスタ';
+        document.getElementById('finished-weight').value = 320;
+        document.getElementById('selling-price').value = 1280;
+        currentRecipe.items = [
+          { ingId: 'ing-1', usedGrams: 100, customYield: 100 },
+          { ingId: 'prep-1', usedGrams: 160, customYield: 100 },
+          { ingId: 'ing-6', usedGrams: 15, customYield: 100 },
+          { ingId: 'ing-7', usedGrams: 12, customYield: 100 }
+        ];
+      } else if (presetKey === 'meat_sauce_prep') {
+        document.querySelector('input[name="recipeType"][value="prep"]').checked = true;
+        changeRecipeType('prep');
+        document.getElementById('recipe-name').value = '【自家製仕込】特製ミートソース';
+        document.getElementById('finished-weight').value = 2000;
+        currentRecipe.items = [
+          { ingId: 'ing-2', usedGrams: 1000, customYield: 95 },
+          { ingId: 'ing-3', usedGrams: 600, customYield: 88 },
+          { ingId: 'ing-4', usedGrams: 800, customYield: 100 },
+          { ingId: 'ing-5', usedGrams: 200, customYield: 100 }
+        ];
+      } else if (presetKey === 'roast_beef') {
+        document.querySelector('input[name="recipeType"][value="menu"]').checked = true;
+        changeRecipeType('menu');
+        document.getElementById('recipe-name').value = '黒毛和牛の特製ローストビーフ';
+        document.getElementById('finished-weight').value = 140;
+        document.getElementById('selling-price').value = 2480;
+        currentRecipe.items = [
+          { ingId: 'ing-8', usedGrams: 120, customYield: 78 },
+          { ingId: 'ing-3', usedGrams: 30, customYield: 88 },
+          { ingId: 'ing-5', usedGrams: 30, customYield: 100 },
+          { ingId: 'ing-6', usedGrams: 10, customYield: 100 }
+        ];
+      }
+      renderRecipeTable();
+    }
+
+    // ====== 5. レシピの保存（仕込みレシピの場合は食材マスタへ自動追加） ======
+    function saveCurrentRecipe() {
+      const name = document.getElementById('recipe-name').value.trim() || '名称未設定レシピ';
+      const finishedWeight = Math.max(1, Number(document.getElementById('finished-weight').value) || 1);
+      const sellingPrice = Number(document.getElementById('selling-price').value) || 0;
+      const totalCost = Number(document.getElementById('total-cost').textContent.replace(/,/g, '')) || 0;
+      const costPerGram = totalCost / finishedWeight;
+
+      const newRec = {
+        id: 'rec-' + Date.now(),
+        type: currentRecipe.type,
+        name: name,
+        finishedWeight: finishedWeight,
+        sellingPrice: sellingPrice,
+        totalCost: totalCost,
+        costPerGram: costPerGram,
+        items: JSON.parse(JSON.stringify(currentRecipe.items))
+      };
+
+      savedRecipes.unshift(newRec);
+
+      // 仕込みレシピの場合、食材マスタにも自動登録・更新する
+      if (currentRecipe.type === 'prep') {
+        const prepName = name.startsWith('【自家製仕込】') ? name : `【自家製仕込】${name}`;
+        const existing = ingredientsMaster.find(m => m.name === prepName);
+        if (existing) {
+          existing.packageGrams = finishedWeight;
+          existing.packagePrice = totalCost;
+        } else {
+          ingredientsMaster.push({
+            id: 'prep-' + Date.now(),
+            name: prepName,
+            category: '仕込み品',
+            packageGrams: finishedWeight,
+            packagePrice: Math.round(totalCost),
+            yieldRate: 100
+          });
+        }
+        renderMasterTable();
+        renderIngredientSelect();
+        alert(`仕込みレシピ「${prepName}」を保存し、食材マスタに【1gあたり ¥${costPerGram.toFixed(2)}】で自動登録しました！グランドメニューのレシピからすぐに呼び出せます。`);
       } else {
-        diffEl.textContent = `±0円`;
-        diffEl.className = 'text-slate-500';
-      }
-    }
-
-    function updateTargetRatio(val) {
-      document.getElementById('target-ratio-display').textContent = `${val}%`;
-      recalculateRecipe();
-    }
-
-    function applyRecommendedPrice() {
-      const recText = document.getElementById('recommended-price-ex').textContent.replace(/,/g, '');
-      const recPrice = Number(recText);
-      if (recPrice > 0) {
-        document.getElementById('recipe-selling-price').value = recPrice;
-        recalculateRecipe();
-        showToast(`推奨販売価格（税抜 ¥${recPrice.toLocaleString()}）を反映しました`, 'success');
-      }
-    }
-
-    // =========================================================================
-    // 8. TAB 2: WHOLESALE SITE BULK PARSER & INGREDIENT DATABASE MANAGEMENT
-    // =========================================================================
-    function fillSampleWholesaleText() {
-      const sampleText = `【業務用食材卸 フーヅネット 取引明細・発注履歴ページ】
-取引先コード: 8841-02  納品予定日: 2025/05/15
-------------------------------------------------------------
-商品コード: 109482
-商品名: ノルウェー産 アトランティックサーモンフィレ（生食可）
-規格・内容量: 1パック (800g)   納品単価(税抜): 2,880円
-
-商品コード: 204911
-商品名: イタリア産 パルミジャーノ・レッジャーノ パウダー
-規格・内容量: 1袋 500g入   納品単価(税抜): 1,450円
-
-商品コード: 330194
-商品名: 北海道産 生クリーム 38% (業務用紙パック)
-規格・内容量: 1000ml × 1本   納品単価(税抜): 1,380円
-
-商品コード: 419022
-商品名: スペイン産 厚切りベーコンブロック
-規格・内容量: 1.2kg (1200g)   納品単価(税抜): 2,160円
-
-商品コード: 501923
-商品名: 業務用 白ワイン（料理用・ペットボトル）
-規格・内容量: 1800ml   納品単価(税抜): 990円
-------------------------------------------------------------`;
-
-      document.getElementById('wholesale-raw-text').value = sampleText;
-      showToast('サンプル取引データを貼り付けました。「AIで解析して食材を抽出プレビュー」を押してください', 'info');
-    }
-
-    async function parseWholesaleDataWithAI() {
-      const rawText = document.getElementById('wholesale-raw-text').value.trim();
-      if (!rawText) {
-        showToast('先に卸サイトの取引テキストを貼り付けるか、「サンプル取引データを貼り付ける」を押してください', 'error');
-        return;
+        alert(`グランドメニュー「${name}」を保存しました！`);
       }
 
-      const btn = document.getElementById('btn-parse-wholesale');
-      btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>AIが取引テキストから商品名・規格(g/ml)・単価を抽出中...</span>`;
-
-      try {
-        const prompt = `以下の飲食店向け卸業者の取引ページ・納品書テキストから、食材アイテムをすべて抽出し、JSON配列で返してください。
-注意：
-- weightは必ずグラム(g)またはミリリットル(ml)の数値に変換してください（例：1.2kg → 1200、1L → 1000）。
-- priceは税抜きの仕入単価（円、数値のみ）にしてください。
-- categoryは「肉類」「魚介類」「野菜・果物」「乳製品・卵」「乾物・麺・粉」「調味料・油」「その他」のいずれかを選んでください。
-
-【取引テキスト】
-${rawText}`;
-
-        const payload = {
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "ARRAY",
-              items: {
-                type: "OBJECT",
-                properties: {
-                  name: { type: "STRING" },
-                  category: { type: "STRING" },
-                  weight: { type: "INTEGER" },
-                  unit: { type: "STRING" },
-                  price: { type: "INTEGER" }
-                },
-                propertyOrdering: ["name", "category", "weight", "unit", "price"]
-              }
-            }
-          }
-        };
-
-        const apiResult = await callGeminiAPI(payload);
-        const jsonStr = apiResult?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!jsonStr) throw new Error('No JSON returned');
-
-        const parsedList = JSON.parse(jsonStr);
-        if (!Array.isArray(parsedList) || parsedList.length === 0) {
-          throw new Error('Empty parsed list');
-        }
-
-        stagedWholesaleItems = parsedList.map(item => ({
-          name: item.name || '不明な食材',
-          category: item.category || 'その他',
-          weight: Math.max(1, Number(item.weight) || 1000),
-          unit: item.unit === 'ml' ? 'ml' : 'g',
-          price: Math.max(1, Number(item.price) || 500)
-        }));
-
-        renderWholesalePreview();
-        showToast(`${stagedWholesaleItems.length}件の食材データをAI抽出しました！`, 'success');
-
-      } catch (err) {
-        // Smart Regex Parser Fallback so any pasted text or sample works 100% reliably
-        stagedWholesaleItems = fallbackSmartWholesaleParser(rawText);
-        renderWholesalePreview();
-        showToast(`${stagedWholesaleItems.length}件の食材データを抽出しました！`, 'success');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i><span>AIで解析して食材を抽出プレビュー</span>`;
-      }
+      renderSavedRecipes();
     }
 
-    function fallbackSmartWholesaleParser(rawText) {
-      // Check if it's the sample or contains recognizable lines
-      const results = [];
-      const blocks = rawText.split(/\n\s*\n|\-{10,}/);
-
-      blocks.forEach(block => {
-        const nameMatch = block.match(/商品名[:：]\s*(.+)/);
-        const weightMatch = block.match(/(\d+(?:\.\d+)?)\s*(kg|g|ml|L)/i);
-        const priceMatch = block.match(/([0-9,]+)\s*円/);
-
-        if (nameMatch && weightMatch && priceMatch) {
-          const name = nameMatch[1].trim();
-          let weight = parseFloat(weightMatch[1]);
-          let unitRaw = weightMatch[2].toLowerCase();
-          let unit = 'g';
-          if (unitRaw === 'kg') { weight = Math.round(weight * 1000); unit = 'g'; }
-          else if (unitRaw === 'l') { weight = Math.round(weight * 1000); unit = 'ml'; }
-          else if (unitRaw === 'ml') { unit = 'ml'; }
-
-          const price = parseInt(priceMatch[1].replace(/,/g, ''), 10);
-
-          let category = 'その他';
-          if (/サーモン|エビ|魚|イカ|タコ|ホタテ/.test(name)) category = '魚介類';
-          else if (/ベーコン|牛|豚|鶏|ハム|肉/.test(name)) category = '肉類';
-          else if (/チーズ|クリーム|バター|牛乳|卵|モッツァレラ/.test(name)) category = '乳製品・卵';
-          else if (/ワイン|オイル|醤油|塩|ソース|酢|みりん/.test(name)) category = '調味料・油';
-          else if (/野菜|トマト|玉ねぎ|レタス|ハーブ/.test(name)) category = '野菜・果物';
-
-          results.push({ name, category, weight, unit, price });
-        }
+    // ====== 6. 食材マスタ管理＆卸サイト貼り付け解析 ======
+    function renderIngredientSelect() {
+      const select = document.getElementById('add-ingredient-select');
+      select.innerHTML = '';
+      ingredientsMaster.forEach(ing => {
+        const eff = getEffectiveUnitCost(ing, ing.yieldRate);
+        const opt = document.createElement('option');
+        opt.value = ing.id;
+        opt.textContent = `[${ing.category}] ${ing.name} (実質 ¥${eff.toFixed(2)}/g・歩留${ing.yieldRate}%)`;
+        select.appendChild(opt);
       });
-
-      // Also support single-line bullet format
-      if (results.length === 0) {
-        const lines = rawText.split('\n');
-        lines.forEach(line => {
-          const wMatch = line.match(/(\d+(?:\.\d+)?)\s*(kg|g|ml|L)/i);
-          const pMatch = line.match(/([0-9,]+)\s*円/);
-          if (wMatch && pMatch) {
-            let cleanName = line.replace(/^[・\-\*]\s*/, '').split(/\d+(?:\.\d+)?\s*(?:kg|g|ml|L)/i)[0].trim();
-            if (!cleanName) cleanName = '取引抽出アイテム';
-            let weight = parseFloat(wMatch[1]);
-            let unitRaw = wMatch[2].toLowerCase();
-            let unit = (unitRaw === 'ml' || unitRaw === 'l') ? 'ml' : 'g';
-            if (unitRaw === 'kg' || unitRaw === 'l') weight *= 1000;
-            const price = parseInt(pMatch[1].replace(/,/g, ''), 10);
-            results.push({ name: cleanName, category: 'その他', weight: Math.round(weight), unit, price });
-          }
-        });
-      }
-
-      return results;
     }
 
-    function renderWholesalePreview() {
-      const emptyEl = document.getElementById('wholesale-preview-empty');
-      const wrapEl = document.getElementById('wholesale-preview-table-wrap');
-      const tbody = document.getElementById('wholesale-preview-tbody');
-      const badge = document.getElementById('parsed-count-badge');
-      const commitBtn = document.getElementById('btn-commit-wholesale');
+    function renderMasterTable() {
+      const tbody = document.getElementById('master-table-body');
+      tbody.innerHTML = '';
+      document.getElementById('master-count').textContent = ingredientsMaster.length;
 
-      badge.textContent = `${stagedWholesaleItems.length}件`;
+      ingredientsMaster.forEach((ing, idx) => {
+        const baseCost = getBaseUnitCost(ing);
+        const effCost = getEffectiveUnitCost(ing, ing.yieldRate);
+        const isPrep = ing.category === '仕込み品';
 
-      if (stagedWholesaleItems.length === 0) {
-        emptyEl.classList.remove('hidden');
-        wrapEl.classList.add('hidden');
-        commitBtn.disabled = true;
-        return;
-      }
-
-      emptyEl.classList.add('hidden');
-      wrapEl.classList.remove('hidden');
-      commitBtn.disabled = false;
-
-      tbody.innerHTML = stagedWholesaleItems.map(item => {
-        const unitCost = (item.price / item.weight).toFixed(2);
-        return `
-          <tr class="hover:bg-slate-50">
-            <td class="py-2 px-2.5 font-bold text-slate-800">${item.name}</td>
-            <td class="py-2 px-2"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[11px]">${item.category}</span></td>
-            <td class="py-2 px-2 text-right font-mono">${item.weight.toLocaleString()}${item.unit}</td>
-            <td class="py-2 px-2 text-right font-mono">¥${item.price.toLocaleString()}</td>
-            <td class="py-2 px-2.5 text-right font-mono font-bold text-orange-600">¥${unitCost}/${item.unit}</td>
-          </tr>
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50';
+        tr.innerHTML = `
+          <td class="py-2 px-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isPrep ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}">
+              ${ing.category}
+            </span>
+          </td>
+          <td class="py-2 px-2 font-bold text-slate-800">${ing.name}</td>
+          <td class="py-2 px-2 text-right font-mono">${ing.packageGrams.toLocaleString()}g</td>
+          <td class="py-2 px-2 text-right font-mono">¥${ing.packagePrice.toLocaleString()}</td>
+          <td class="py-2 px-2 text-right font-mono text-slate-500">¥${baseCost.toFixed(2)}</td>
+          <td class="py-2 px-2 text-center">
+            <input type="number" value="${ing.yieldRate}" min="1" max="100"
+              onchange="updateMasterYield(${idx}, this.value)"
+              class="w-14 text-right border border-slate-300 rounded px-1 py-0.5 font-bold"> %
+          </td>
+          <td class="py-2 px-2 text-right font-mono font-bold text-amber-700">¥${effCost.toFixed(2)}</td>
         `;
-      }).join('');
+        tbody.appendChild(tr);
+      });
     }
 
-    function commitParsedIngredients() {
-      if (stagedWholesaleItems.length === 0) return;
-
-      const addedCount = stagedWholesaleItems.length;
-      stagedWholesaleItems.forEach((item, idx) => {
-        ingredientsDB.unshift({
-          id: `ing-ws-${Date.now()}-${idx}`,
-          name: item.name,
-          category: item.category,
-          weight: item.weight,
-          unit: item.unit,
-          price: item.price,
-          keywords: [item.name]
-        });
-      });
-
-      stagedWholesaleItems = [];
-      document.getElementById('wholesale-raw-text').value = '';
-      renderWholesalePreview();
-      renderIngredientDatabase();
-      updateHeaderCounts();
-
-      showToast(`${addedCount}品目の食材をマスタへ一括登録しました！レシピ作成画面で即座に使用できます。`, 'success');
+    function updateMasterYield(idx, val) {
+      ingredientsMaster[idx].yieldRate = Math.max(1, Math.min(100, Number(val) || 100));
+      renderMasterTable();
+      renderIngredientSelect();
+      renderRecipeTable();
     }
 
     function addManualIngredient() {
-      const nameEl = document.getElementById('manual-ing-name');
-      const catEl = document.getElementById('manual-ing-category');
-      const weightEl = document.getElementById('manual-ing-weight');
-      const priceEl = document.getElementById('manual-ing-price');
+      const name = document.getElementById('new-ing-name').value.trim();
+      const pkg = Number(document.getElementById('new-ing-pkg').value);
+      const price = Number(document.getElementById('new-ing-price').value);
+      const yieldRate = Number(document.getElementById('new-ing-yield').value) || 100;
 
-      const name = nameEl.value.trim();
-      const category = catEl.value;
-      const weight = Number(weightEl.value);
-      const price = Number(priceEl.value);
-
-      if (!name || weight <= 0 || price <= 0) {
-        showToast('食材名・内容量(g/ml)・仕入価格(円)を正しく入力してください', 'error');
+      if (!name || !pkg || !price) {
+        alert('食材名・内容量(g)・仕入価格(円)を入力してください。');
         return;
       }
 
-      const unit = category === '調味料・油' && name.includes('オイル') ? 'ml' : 'g';
-
-      ingredientsDB.unshift({
-        id: `ing-man-${Date.now()}`,
+      ingredientsMaster.push({
+        id: 'ing-' + Date.now(),
         name,
-        category,
-        weight,
-        unit,
-        price,
-        keywords: [name]
+        category: '仕入食材',
+        packageGrams: pkg,
+        packagePrice: price,
+        yieldRate
       });
 
-      nameEl.value = '';
-      weightEl.value = '';
-      priceEl.value = '';
-
-      renderIngredientDatabase();
-      updateHeaderCounts();
-      showToast(`「${name}」を食材データベースに登録しました`, 'success');
+      document.getElementById('new-ing-name').value = '';
+      document.getElementById('new-ing-pkg').value = '';
+      document.getElementById('new-ing-price').value = '';
+      renderMasterTable();
+      renderIngredientSelect();
     }
 
-    function deleteIngredientFromDB(ingId) {
-      if (ingredientsDB.length <= 1) {
-        showToast('最低1品目は食材を残してください', 'error');
-        return;
-      }
-      const target = ingredientsDB.find(i => i.id === ingId);
-      ingredientsDB = ingredientsDB.filter(i => i.id !== ingId);
-      currentRecipeRows = currentRecipeRows.filter(r => r.ingId !== ingId);
-      renderIngredientDatabase();
-      updateHeaderCounts();
-      if (target) showToast(`「${target.name}」を削除しました`, 'info');
+    function pasteSampleSupplierText() {
+      document.getElementById('supplier-raw-text').value =
+`【納品明細 2026/11/17 業務用食材卸フーズネット】
+商品コード: 490123  ノルウェー産 アトランティックサーモン(皮骨付フィレ) 1.2kg  3,840円
+商品コード: 882104  青森県産 むきニンニク 1kgパック  1,580円
+商品コード: 330912  北海道産 生クリーム(乳脂肪47%) 1000ml  1,420円
+商品コード: 510029  千葉県産 フレッシュバジル 200g袋  680円`;
     }
 
-    function updateIngredientField(ingId, field, value) {
-      const ing = ingredientsDB.find(i => i.id === ingId);
-      if (!ing) return;
-      const num = Math.max(1, Number(value) || 1);
-      ing[field] = num;
-      renderIngredientDatabase();
-      recalculateRecipe();
-    }
-
-    function renderIngredientDatabase() {
-      const tbody = document.getElementById('db-ingredients-tbody');
-      const query = (document.getElementById('db-search-input')?.value || '').trim().toLowerCase();
-
-      const filtered = ingredientsDB.filter(item =>
-        !query || item.name.toLowerCase().includes(query) || item.category.toLowerCase().includes(query)
-      );
-
-      document.getElementById('db-total-count-label').textContent = `${ingredientsDB.length}品目`;
-
-      tbody.innerHTML = filtered.map(item => {
-        const unitPrice = formatUnitPrice(getUnitPrice(item));
-        return `
-          <tr class="hover:bg-slate-50 transition-colors">
-            <td class="py-3 px-4 font-bold text-slate-800">${item.name}</td>
-            <td class="py-3 px-3">
-              <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">${item.category}</span>
-            </td>
-            <td class="py-3 px-3 text-right">
-              <div class="inline-flex items-center gap-1">
-                <input type="number" value="${item.weight}" min="1"
-                       onchange="updateIngredientField('${item.id}', 'weight', this.value)"
-                       class="w-20 px-2 py-1 text-right rounded border border-slate-200 font-mono text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none" />
-                <span class="text-xs text-slate-500">${item.unit}</span>
-              </div>
-            </td>
-            <td class="py-3 px-3 text-right">
-              <div class="inline-flex items-center gap-1">
-                <span class="text-xs text-slate-400">¥</span>
-                <input type="number" value="${item.price}" min="1"
-                       onchange="updateIngredientField('${item.id}', 'price', this.value)"
-                       class="w-20 px-2 py-1 text-right rounded border border-slate-200 font-mono text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none" />
-              </div>
-            </td>
-            <td class="py-3 px-3 text-right font-mono font-bold text-orange-600">
-              ¥${unitPrice} <span class="text-[11px] font-normal text-slate-400">/${item.unit}</span>
-            </td>
-            <td class="py-3 px-4 text-center">
-              <button type="button" onclick="deleteIngredientFromDB('${item.id}')" class="px-2.5 py-1 rounded-lg text-xs text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors">
-                <i class="fa-solid fa-trash-can"></i>
-              </button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    function updateHeaderCounts() {
-      document.getElementById('nav-ing-badge').textContent = ingredientsDB.length;
-      document.getElementById('header-ing-count-mobile').textContent = ingredientsDB.length;
-      document.getElementById('nav-recipe-badge').textContent = savedRecipes.length;
-    }
-
-    // =========================================================================
-    // 9. TAB 3: SAVED RECIPES & PRINTABLE SHEET MODAL
-    // =========================================================================
-    function saveCurrentRecipe() {
-      const name = document.getElementById('recipe-name-input').value.trim() || '無題のメニュー';
-      const finishedWeight = Math.max(1, Number(document.getElementById('recipe-finished-weight').value) || 300);
-      const sellingPrice = Math.max(1, Number(document.getElementById('recipe-selling-price').value) || 1000);
-      const memo = document.getElementById('recipe-memo-input').value.trim();
-
-      if (currentRecipeRows.length === 0) {
-        showToast('食材が1つも入っていません', 'error');
+    function parseSupplierText() {
+      const raw = document.getElementById('supplier-raw-text').value.trim();
+      if (!raw) {
+        alert('卸サイトの取引ページテキストを貼り付けてください。');
         return;
       }
 
-      const now = new Date();
-      const timestamp = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      const lines = raw.split('\n');
+      let addedCount = 0;
 
-      const existingIdx = savedRecipes.findIndex(r => r.name === name);
-      const recipeObj = {
-        id: existingIdx >= 0 ? savedRecipes[existingIdx].id : `rec-${Date.now()}`,
-        name,
-        finishedWeight,
-        sellingPrice,
-        memo,
-        rows: currentRecipeRows.map(r => ({ ingId: r.ingId, amount: r.amount })),
-        updatedAt: timestamp
-      };
+      lines.forEach(line => {
+        // 価格(円)と容量(kg/g/ml)を正規表現で自動抽出
+        const priceMatch = line.match(/([0-9,]+)\s*円/);
+        const weightMatch = line.match(/([0-9.]+)\s*(kg|g|ml|L)/i);
 
-      if (existingIdx >= 0) {
-        savedRecipes[existingIdx] = recipeObj;
+        if (priceMatch && weightMatch) {
+          const price = Number(priceMatch[1].replace(/,/g, ''));
+          let grams = Number(weightMatch[1]);
+          const unit = weightMatch[2].toLowerCase();
+          if (unit === 'kg' || unit === 'l') grams *= 1000;
+
+          // 商品名の抽出
+          let cleanName = line
+            .replace(/商品コード[:：]?\s*\d+/g, '')
+            .replace(priceMatch[0], '')
+            .replace(weightMatch[0], '')
+            .replace(/パック|袋|箱|フィレ/g, '')
+            .trim();
+
+          // 皮・骨・殻などが含まれる場合は歩留まり率を自動推定
+          let estimatedYield = 100;
+          if (cleanName.includes('皮') || cleanName.includes('骨')) estimatedYield = 75;
+          else if (cleanName.includes('バジル') || cleanName.includes('葉')) estimatedYield = 85;
+
+          ingredientsMaster.push({
+            id: 'ing-' + Date.now() + '-' + addedCount,
+            name: cleanName || '抽出食材',
+            category: '仕入食材',
+            packageGrams: grams,
+            packagePrice: price,
+            yieldRate: estimatedYield
+          });
+          addedCount++;
+        }
+      });
+
+      if (addedCount > 0) {
+        renderMasterTable();
+        renderIngredientSelect();
+        document.getElementById('supplier-raw-text').value = '';
+        alert(`${addedCount}件の食材を自動解析し、マスタへ一括登録しました！`);
       } else {
-        savedRecipes.unshift(recipeObj);
+        alert('「〇〇g / 〇〇kg」と「〇〇円」が含まれる行が見つかりませんでした。');
       }
-
-      updateHeaderCounts();
-      showToast(`「${name}」をレシピ帳に保存しました！`, 'success');
     }
 
-    function computeRecipeSummary(rec) {
-      let totalCost = 0;
-      rec.rows.forEach(r => {
-        const ing = ingredientsDB.find(i => i.id === r.ingId);
-        if (ing) totalCost += getUnitPrice(ing) * r.amount;
-      });
-      const ratio = (totalCost / rec.sellingPrice) * 100;
-      const profit = rec.sellingPrice - totalCost;
-      return { totalCost, ratio, profit };
-    }
-
+    // ====== 7. 保存済みレシピ一覧の描画 ======
     function renderSavedRecipes() {
+      document.getElementById('saved-count').textContent = savedRecipes.length;
       const grid = document.getElementById('saved-recipes-grid');
-      if (savedRecipes.length === 0) {
-        grid.innerHTML = `<div class="col-span-full py-12 text-center text-slate-400 text-sm">保存されたレシピはまだありません。</div>`;
-        return;
-      }
+      grid.innerHTML = '';
 
-      grid.innerHTML = savedRecipes.map(rec => {
-        const { totalCost, ratio, profit } = computeRecipeSummary(rec);
-        const badgeColor = ratio < 25 ? 'bg-sky-100 text-sky-700'
-                         : ratio <= 32 ? 'bg-emerald-100 text-emerald-700'
-                         : ratio <= 38 ? 'bg-amber-100 text-amber-700'
-                         : 'bg-rose-100 text-rose-700';
+      savedRecipes.forEach(rec => {
+        const isPrep = rec.type === 'prep';
+        const costRate = (!isPrep && rec.sellingPrice > 0)
+          ? ((rec.totalCost / rec.sellingPrice) * 100).toFixed(1) + '%'
+          : '-';
 
-        return `
-          <div class="border border-slate-200 rounded-2xl p-5 hover:shadow-md transition-all bg-white flex flex-col justify-between space-y-4">
-            <div class="space-y-2.5">
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-slate-900 text-base leading-snug">${rec.name}</h3>
-                <span class="shrink-0 px-2.5 py-0.5 rounded-full text-xs font-extrabold ${badgeColor}">
-                  原価率 ${ratio.toFixed(1)}%
-                </span>
-              </div>
-              <p class="text-xs text-slate-400"><i class="fa-regular fa-clock mr-1"></i>更新: ${rec.updatedAt} ・ 使用食材 ${rec.rows.length}品目</p>
-
-              <div class="grid grid-cols-3 gap-2 pt-2 bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                <div>
-                  <div class="text-[10px] text-slate-500">税抜売価</div>
-                  <div class="text-sm font-bold text-slate-800">¥${rec.sellingPrice.toLocaleString()}</div>
-                </div>
-                <div>
-                  <div class="text-[10px] text-slate-500">総原価</div>
-                  <div class="text-sm font-extrabold text-orange-600">¥${totalCost.toFixed(1)}</div>
-                </div>
-                <div>
-                  <div class="text-[10px] text-slate-500">粗利額</div>
-                  <div class="text-sm font-bold text-emerald-600">¥${Math.round(profit).toLocaleString()}</div>
-                </div>
-              </div>
-
-              <p class="text-xs text-slate-600 line-clamp-2">${rec.memo || ''}</p>
+        const card = document.createElement('div');
+        card.className = 'border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col justify-between';
+        card.innerHTML = `
+          <div>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded ${isPrep ? 'bg-indigo-100 text-indigo-800' : 'bg-amber-100 text-amber-800'}">
+              ${isPrep ? '仕込みレシピ' : 'グランドメニュー'}
+            </span>
+            <h3 class="font-bold text-base text-slate-800 mt-2">${rec.name}</h3>
+            <p class="text-xs text-slate-500 mt-1">仕上がり量: ${rec.finishedWeight}g / 使用食材: ${rec.items.length}品目</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-200 flex justify-between items-end">
+            <div>
+              <span class="text-[11px] text-slate-400 block">総原価 (1g単価)</span>
+              <span class="font-bold text-slate-900">¥${Math.round(rec.totalCost).toLocaleString()} <span class="text-xs font-normal text-slate-500">(¥${rec.costPerGram.toFixed(2)}/g)</span></span>
             </div>
-
-            <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
-              <button type="button" onclick="loadSavedRecipe('${rec.id}')" class="flex-1 py-2 px-3 rounded-xl bg-navy-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors">
-                <i class="fa-solid fa-pen-to-square"></i>
-                <span>エディタに呼び出す</span>
-              </button>
-              <button type="button" onclick="loadAndPrintRecipe('${rec.id}')" class="py-2 px-3 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1">
-                <i class="fa-solid fa-print"></i>
-                <span>レシピ表</span>
-              </button>
+            <div class="text-right">
+              <span class="text-[11px] text-slate-400 block">${isPrep ? 'マスタ連動済' : '原価率'}</span>
+              <span class="font-bold text-amber-600">${costRate}</span>
             </div>
           </div>
         `;
-      }).join('');
+        grid.appendChild(card);
+      });
     }
 
-    function loadSavedRecipe(recId) {
-      const rec = savedRecipes.find(r => r.id === recId);
-      if (!rec) return;
-
-      document.getElementById('recipe-name-input').value = rec.name;
-      document.getElementById('recipe-finished-weight').value = rec.finishedWeight;
-      document.getElementById('recipe-selling-price').value = rec.sellingPrice;
-      document.getElementById('recipe-memo-input').value = rec.memo || '';
-
-      currentRecipeRows = rec.rows.map((r, i) => ({
-        rowId: `r-load-${Date.now()}-${i}`,
-        ingId: r.ingId,
-        amount: r.amount
-      }));
-
-      switchTab('recipe');
-      showToast(`「${rec.name}」をエディタに読み込みました`, 'info');
-    }
-
-    function loadAndPrintRecipe(recId) {
-      loadSavedRecipe(recId);
-      openPrintModal();
-    }
-
-    function openPrintModal() {
-      const name = document.getElementById('recipe-name-input').value.trim() || '無題のメニュー';
-      const finishedWeight = Math.max(1, Number(document.getElementById('recipe-finished-weight').value) || 300);
-      const sellingPrice = Math.max(1, Number(document.getElementById('recipe-selling-price').value) || 1000);
-      const memo = document.getElementById('recipe-memo-input').value.trim();
-
-      let totalCost = 0;
-      let totalRaw = 0;
-      const rowsHtml = currentRecipeRows.map((row, idx) => {
-        const ing = ingredientsDB.find(i => i.id === row.ingId);
-        if (!ing) return '';
-        const uCost = getUnitPrice(ing);
-        const sub = uCost * row.amount;
-        totalCost += sub;
-        totalRaw += Number(row.amount) || 0;
-        return `
-          <tr class="border-b border-slate-200">
-            <td class="py-2 px-3 text-xs">${idx + 1}</td>
-            <td class="py-2 px-3 text-xs font-bold">${ing.name}</td>
-            <td class="py-2 px-3 text-xs text-right font-mono">¥${uCost.toFixed(2)}/${ing.unit}</td>
-            <td class="py-2 px-3 text-xs text-right font-mono font-bold">${row.amount}${ing.unit}</td>
-            <td class="py-2 px-3 text-xs text-right font-mono">¥${sub.toFixed(1)}</td>
-          </tr>
-        `;
-      }).join('');
-
-      const ratio = (totalCost / sellingPrice) * 100;
-      const costPerGram = totalCost / finishedWeight;
-
-      const sheetBody = document.getElementById('printable-sheet-body');
-      sheetBody.innerHTML = `
-        <div class="border-b-2 border-slate-900 pb-4 flex items-end justify-between">
-          <div>
-            <div class="text-[11px] font-bold text-orange-600 uppercase tracking-wider">STANDARD RECIPE & COST SHEET</div>
-            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">${name}</h2>
-          </div>
-          <div class="text-right text-xs text-slate-500">
-            <div>作成日: ${new Date().toLocaleDateString('ja-JP')}</div>
-            <div>仕上がり規格: ${finishedWeight}g (1人前)</div>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-4 gap-3 bg-slate-100 p-4 rounded-xl text-center">
-          <div>
-            <div class="text-[11px] text-slate-500">税抜販売価格</div>
-            <div class="text-base font-extrabold text-slate-900">¥${sellingPrice.toLocaleString()}</div>
-          </div>
-          <div>
-            <div class="text-[11px] text-slate-500">総原価</div>
-            <div class="text-base font-extrabold text-orange-600">¥${totalCost.toFixed(1)}</div>
-          </div>
-          <div>
-            <div class="text-[11px] text-slate-500">原価率</div>
-            <div class="text-base font-extrabold text-slate-900">${ratio.toFixed(1)}%</div>
-          </div>
-          <div>
-            <div class="text-[11px] text-slate-500">1gあたり原価</div>
-            <div class="text-base font-extrabold text-slate-900">¥${costPerGram.toFixed(2)}/g</div>
-          </div>
-        </div>
-
-        <div>
-          <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">配合レシピ・使用食材明細</h4>
-          <table class="w-full text-left border-collapse border border-slate-200">
-            <thead>
-              <tr class="bg-slate-50 text-slate-600 text-xs border-b border-slate-200">
-                <th class="py-2 px-3 w-10">No.</th>
-                <th class="py-2 px-3">食材名</th>
-                <th class="py-2 px-3 text-right">単価</th>
-                <th class="py-2 px-3 text-right">使用量</th>
-                <th class="py-2 px-3 text-right">小計原価</th>
-              </tr>
-            </thead>
-            <tbody>${rowsHtml}</tbody>
-            <tfoot>
-              <tr class="bg-slate-50 font-bold text-xs">
-                <td colspan="3" class="py-2.5 px-3 text-right">合計</td>
-                <td class="py-2.5 px-3 text-right font-mono">${totalRaw}g</td>
-                <td class="py-2.5 px-3 text-right font-mono text-orange-600">¥${totalCost.toFixed(1)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-          <div class="text-xs font-bold text-slate-700 mb-1">調理手順・盛り付けポイント</div>
-          <p class="text-xs text-slate-700 whitespace-pre-line leading-relaxed">${memo || '特になし'}</p>
-        </div>
-      `;
-
-      document.getElementById('print-modal').classList.remove('hidden');
-    }
-
-    function closePrintModal() {
-      document.getElementById('print-modal').classList.add('hidden');
-    }
-
-    // =========================================================================
-    // 10. INITIALIZATION ON WINDOW LOAD
-    // =========================================================================
-    window.onload = function() {
-      // Load initial sample dish visual without triggering redundant toast on startup
-      const initialSample = 'bolognese';
-      const dataUrl = generateSampleDishDataUrl(initialSample);
-      currentPhotoState = {
-        type: 'sample',
-        sampleKey: initialSample,
-        base64Data: dataUrl.split(',')[1],
-        mimeType: 'image/png',
-        dataUrl: dataUrl
-      };
-
-      document.getElementById('photo-empty-state').classList.add('hidden');
-      document.getElementById('photo-preview-container').classList.remove('hidden');
-      document.getElementById('dish-preview-img').src = dataUrl;
-      document.getElementById('photo-dish-caption').textContent = SAMPLE_DISH_CONFIG[initialSample].title;
-      document.getElementById('sample-btn-bolognese').classList.add('ring-2', 'ring-orange-500', 'bg-orange-50', 'border-orange-500');
-
-      renderRecipeTable();
-      recalculateRecipe();
-      renderIngredientDatabase();
-      renderSavedRecipes();
-      updateHeaderCounts();
-    };
+    // 初期起動
+    initApp();
   </script>
 </body>
 </html>
