@@ -235,14 +235,45 @@
               </table>
             </div>
 
-            <!-- 食材を手動で追加するバー -->
-            <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2">
-              <select id="add-ingredient-select" class="flex-1 min-w-[220px] text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500 bg-white">
-                <!-- JSで格納 -->
-              </select>
-              <button onclick="addIngredientRow()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition">
-                <i class="fa-solid fa-plus mr-1"></i> 食材・仕込み品を行に追加
-              </button>
+            <!-- 食材を手動で追加するバー（登録マスタ選択 ＋ 未登録食材の直接打ち込み追加） -->
+            <div class="mt-4 pt-3 border-t border-slate-100 space-y-2.5">
+              <div class="flex flex-wrap items-center gap-2">
+                <select id="add-ingredient-select" class="flex-1 min-w-[220px] text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500 bg-white">
+                  <!-- JSで格納 -->
+                </select>
+                <button onclick="addIngredientRow()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition whitespace-nowrap">
+                  <i class="fa-solid fa-plus mr-1"></i> 食材・仕込み品を行に追加
+                </button>
+                <button onclick="toggleDirectInlineForm()" class="px-3.5 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-xs font-bold rounded-lg transition whitespace-nowrap">
+                  <i class="fa-solid fa-keyboard mr-1"></i> 未登録食材を直接打ち込み追加
+                </button>
+              </div>
+
+              <!-- 未登録食材の直接打ち込みフォーム（食材DBへ自動登録＆レシピ行へ追加＆DB修正がレシピへ連動） -->
+              <div id="direct-inline-form" class="hidden bg-amber-50/70 border border-amber-200 rounded-xl p-3 flex flex-wrap items-center gap-2 text-xs">
+                <span class="font-bold text-amber-900 whitespace-nowrap">直接打ち込み:</span>
+                <input type="text" id="inline-ing-name" placeholder="食材名 (例: 特製レモンソース)" class="flex-1 min-w-[150px] border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:border-amber-500">
+                
+                <div class="inline-flex items-center border border-slate-300 rounded-lg bg-white px-2 py-1 whitespace-nowrap">
+                  <span class="text-slate-400 mr-1">規格</span>
+                  <input type="number" id="inline-ing-pkg" placeholder="容量" min="0.01" step="any" class="w-16 text-right focus:outline-none">
+                  <input type="text" id="inline-ing-unit" list="unit-options" value="g" class="w-11 ml-1 pl-1 border-l border-slate-200 text-center font-bold text-slate-700 bg-transparent focus:outline-none">
+                </div>
+
+                <div class="inline-flex items-center border border-slate-300 rounded-lg bg-white px-2 py-1 whitespace-nowrap">
+                  <span class="text-slate-500 font-bold mr-1">¥</span>
+                  <input type="number" id="inline-ing-price" placeholder="仕入価格" min="1" class="w-16 text-right focus:outline-none">
+                </div>
+
+                <div class="inline-flex items-center border border-amber-400 rounded-lg bg-white px-2 py-1 whitespace-nowrap">
+                  <span class="text-amber-700 font-bold mr-1">今回使用</span>
+                  <input type="number" id="inline-ing-used" placeholder="使用量" value="50" min="0" step="any" class="w-14 text-right font-bold focus:outline-none">
+                </div>
+
+                <button onclick="addDirectInlineIngredient()" class="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-lg transition whitespace-nowrap">
+                  追加してDB連動
+                </button>
+              </div>
             </div>
 
             <!-- STEP 3: 仕上がり量・販売価格・原価率パネル -->
@@ -310,30 +341,46 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 2: 店舗登録済み 食材データベース (フルワイド＋ワンクリック削除対応) ==================== -->
+    <!-- ==================== TAB 2: 店舗登録済み 食材データベース (フルワイド＋テキスト＆写真一括登録＋ワンクリック削除) ==================== -->
     <section id="view-ingredients" class="hidden space-y-6">
       
-      <!-- 上段：卸サイトの取引ページを貼り付けて一括登録 -->
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-        <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+      <!-- 上段：卸サイトの取引ページ（テキスト貼付 または 写真添付）から一括登録 -->
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-3">
+        <div class="flex flex-wrap justify-between items-center gap-2">
           <div class="flex items-center space-x-2">
             <i class="fa-solid fa-paste text-amber-500 text-base"></i>
-            <h2 class="text-base font-bold text-slate-800">卸サイトの取引ページを貼り付けて一括登録</h2>
-            <span class="text-xs text-slate-400 hidden sm:inline">（納品履歴や取引画面のテキストから商品名・容量・単価・歩留まりを自動抽出）</span>
+            <h2 class="text-base font-bold text-slate-800">卸サイトの取引ページ（テキスト貼付・写真添付）から一括登録</h2>
+            <span class="text-xs text-slate-400 hidden sm:inline">（取引画面の文字コピーや、納品書・商品ラベル・取引画面の写真から一括抽出）</span>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <input type="file" id="supplier-photo-input" accept="image/*" class="hidden" onchange="handleSupplierPhotoUpload(event)">
+            <label for="supplier-photo-input" id="btn-supplier-photo" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-lg transition cursor-pointer inline-flex items-center">
+              <i class="fa-solid fa-camera mr-1.5"></i> 写真から読み取る
+            </label>
             <button onclick="pasteSampleSupplierText()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg transition">
               <i class="fa-solid fa-file-lines mr-1"></i> サンプル取引データを貼付
             </button>
-            <button onclick="document.getElementById('supplier-raw-text').value=''" class="text-xs text-slate-400 hover:text-slate-600 px-2 py-1.5">
+            <button onclick="clearSupplierInput()" class="text-xs text-slate-400 hover:text-slate-600 px-2 py-1.5">
               クリア
             </button>
           </div>
         </div>
 
+        <!-- 添付した取引写真のプレビューバー -->
+        <div id="supplier-photo-preview-bar" class="hidden bg-indigo-50/70 border border-indigo-200 rounded-lg p-2.5 flex items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <img id="supplier-photo-preview" src="" alt="取引写真プレビュー" class="w-14 h-14 object-cover rounded border border-indigo-300">
+            <div class="text-xs">
+              <span class="font-bold text-indigo-900 block">取引写真が添付されました（自動軽量化済）</span>
+              <span id="supplier-photo-status" class="text-indigo-700">「AI解析して一括追加」を押すと写真から食材・容量・価格を抽出します</span>
+            </div>
+          </div>
+          <button onclick="clearSupplierInput()" class="text-xs text-indigo-600 hover:text-indigo-900 font-bold px-2">取消</button>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch">
           <div class="lg:col-span-9">
-            <textarea id="supplier-raw-text" rows="3" placeholder="ここに卸サイトの取引履歴テキストを貼り付けてください...（例：ノルウェー産 サーモン 1.2kg 3,840円 / 生クリーム 1000ml 1,420円）" class="w-full h-full text-xs border border-slate-300 rounded-lg p-3 focus:outline-none focus:border-amber-500 font-mono bg-slate-50"></textarea>
+            <textarea id="supplier-raw-text" rows="3" placeholder="ここに卸サイトの取引履歴テキストを貼り付けるか、右上の「写真から読み取る」から納品書・取引画面の写真を選択してください..." class="w-full h-full text-xs border border-slate-300 rounded-lg p-3 focus:outline-none focus:border-amber-500 font-mono bg-slate-50"></textarea>
           </div>
           <div class="lg:col-span-3 flex">
             <button onclick="parseSupplierText()" id="btn-parse-supplier" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-sm rounded-lg shadow-sm transition flex items-center justify-center">
@@ -348,7 +395,7 @@
         <div class="flex flex-wrap justify-between items-center gap-4 pb-4 border-b border-slate-200">
           <div>
             <h2 class="text-lg font-bold text-slate-800">店舗登録済み 食材データベース一覧 (<span id="master-count">0</span>品目)</h2>
-            <p class="text-xs text-slate-500 mt-0.5">各項目は直接クリックして書き換え修正でき、右端のゴミ箱ボタンでワンクリック削除できます</p>
+            <p class="text-xs text-slate-500 mt-0.5">規格容量や仕入価格などを修正すると、レシピ表や保存済みレシピ帳の原価・原価率にも即座に反映されます</p>
           </div>
 
           <!-- 表示方法の切り替えボタン -->
@@ -528,7 +575,7 @@
             <span id="api-key-status" class="text-xs font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-600">未設定（デモモード）</span>
           </div>
           <p class="text-xs text-slate-500 leading-relaxed">
-            APIキーを入力すると、実際の料理写真からの食材ピックアップや、卸サイト文字の高精度AI解析が動作します。キーはこのブラウザ内部（LocalStorage）にのみ保存され、GitHub等の外部コードには一切公開されません。
+            APIキーを入力すると、実際の料理写真からの食材ピックアップや、取引テキスト・取引写真からの高精度AI解析が動作します。キーはこのブラウザ内部（LocalStorage）にのみ保存され、GitHub等の外部コードには一切公開されません。
           </p>
           <div class="flex gap-2">
             <input type="password" id="gemini-api-key-input" placeholder="AIzaSy... から始まるGemini APIキーを入力" class="flex-1 text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white font-mono focus:outline-none focus:border-amber-500">
@@ -666,6 +713,7 @@
 
     let ingredientsMaster = [];
     let savedRecipes = [];
+    let supplierPhotoDataUrl = '';
 
     const categoryList = ['肉類', '魚介類', '野菜・果実', '乳製品・卵', '乾物・麺・粉', '調味料・油', '仕込み品'];
     let dbViewMode = 'all';
@@ -895,6 +943,55 @@
       renderRecipeTable();
     }
 
+    // 未登録食材の直接打ち込みフォーム開閉
+    function toggleDirectInlineForm() {
+      document.getElementById('direct-inline-form').classList.toggle('hidden');
+    }
+
+    // 未登録食材を直接打ち込んで追加（食材DBへ自動登録し、以降のDB修正がレシピにも自動連動）
+    function addDirectInlineIngredient() {
+      const name = document.getElementById('inline-ing-name').value.trim();
+      const pkg = Number(document.getElementById('inline-ing-pkg').value);
+      const unitInput = document.getElementById('inline-ing-unit').value.trim();
+      const unit = unitInput.length > 0 ? unitInput : 'g';
+      const price = Number(document.getElementById('inline-ing-price').value);
+      const usedGrams = Math.max(0, Number(document.getElementById('inline-ing-used').value) || 0);
+
+      if (!name || !pkg || !price) {
+        alert('食材名・規格容量・仕入価格(円)を入力してください。');
+        return;
+      }
+
+      const newIng = {
+        id: 'ing-' + Date.now(),
+        name,
+        category: '調味料・油',
+        supplier: '直接入力',
+        packageGrams: pkg,
+        unit,
+        packagePrice: price,
+        yieldRate: 100
+      };
+
+      ingredientsMaster.push(newIng);
+      currentRecipe.items.push({
+        ingId: newIng.id,
+        usedGrams: usedGrams,
+        customYield: 100
+      });
+
+      document.getElementById('inline-ing-name').value = '';
+      document.getElementById('inline-ing-pkg').value = '';
+      document.getElementById('inline-ing-price').value = '';
+      document.getElementById('inline-ing-used').value = '50';
+
+      saveToStorage();
+      renderMasterDatabase();
+      renderIngredientSelect();
+      renderRecipeTable();
+      renderSavedRecipes();
+    }
+
     function recalculateRecipe() {
       let totalCost = 0;
       currentRecipe.items.forEach(item => {
@@ -941,7 +1038,6 @@
             let width = img.width;
             let height = img.height;
 
-            // 横幅が800pxを超える場合は縦横比を維持して縮小
             if (width > maxWidth) {
               height = Math.round((height * maxWidth) / width);
               width = maxWidth;
@@ -952,7 +1048,6 @@
             canvas.height = height;
             const ctx = canvas.getContext('2d');
 
-            // 透過PNG対策として白背景を敷いてから描画
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, width, height);
             ctx.drawImage(img, 0, 0, width, height);
@@ -976,7 +1071,6 @@
         const compressedDataUrl = await compressImageFile(file, 800, 0.8);
         currentRecipe.photoUrl = compressedDataUrl;
 
-        // 圧縮後の概算KBサイズを計算してバッジ表示
         const approxKb = Math.round((compressedDataUrl.length * 3) / 4 / 1024);
         const sizeBadge = document.getElementById('photo-size-badge');
         if (sizeBadge) {
@@ -1150,7 +1244,7 @@ ${masterListText}
       switchTab('saved');
     }
 
-    // ====== 6. 食材データベース管理（ワンクリック削除対応） ======
+    // ====== 6. 食材データベース管理（写真添付一括登録・DB修正のレシピ連動・ワンクリック削除） ======
     function setDbViewMode(mode) {
       dbViewMode = mode;
       ['all', 'category', 'supplier'].forEach(m => {
@@ -1306,6 +1400,7 @@ ${masterListText}
       renderSavedRecipes();
     }
 
+    // 食材DBの修正（規格容量・仕入価格・歩留まり・単位など）をレシピ表＆保存済みレシピ帳にリアルタイム連動
     function updateMasterField(idx, field, value) {
       if (['packageGrams', 'packagePrice', 'yieldRate'].includes(field)) {
         ingredientsMaster[idx][field] = Math.max(0.01, Number(value) || 1);
@@ -1364,9 +1459,58 @@ ${masterListText}
 商品コード: 510029  カマンベールチーズ ホール 1pc  680円`;
     }
 
+    // 取引ページ写真の選択・自動軽量化
+    async function handleSupplierPhotoUpload(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      try {
+        const compressed = await compressImageFile(file, 800, 0.8);
+        supplierPhotoDataUrl = compressed;
+        document.getElementById('supplier-photo-preview').src = compressed;
+        document.getElementById('supplier-photo-preview-bar').classList.remove('hidden');
+      } catch (e) {
+        alert('写真の読み込みに失敗しました。');
+      }
+    }
+
+    function clearSupplierInput() {
+      document.getElementById('supplier-raw-text').value = '';
+      document.getElementById('supplier-photo-input').value = '';
+      supplierPhotoDataUrl = '';
+      document.getElementById('supplier-photo-preview-bar').classList.add('hidden');
+    }
+
+    function registerExtractedItems(list, defaultSupplier = '卸サイト抽出') {
+      if (!Array.isArray(list) || list.length === 0) return 0;
+      let count = 0;
+      list.forEach((item, i) => {
+        ingredientsMaster.push({
+          id: 'ing-' + Date.now() + '-' + i,
+          name: item.name || '抽出食材',
+          category: categoryList.includes(item.category) ? item.category : '野菜・果実',
+          supplier: item.supplier || defaultSupplier,
+          packageGrams: Math.max(0.01, Number(item.packageGrams) || 1000),
+          unit: (item.unit || 'g').trim() || 'g',
+          packagePrice: Math.max(1, Number(item.packagePrice) || 500),
+          yieldRate: Math.max(1, Math.min(100, Number(item.yieldRate) || 100))
+        });
+        count++;
+      });
+      saveToStorage();
+      renderMasterDatabase();
+      renderIngredientSelect();
+      return count;
+    }
+
+    // 卸サイトテキスト／写真からの一括抽出登録
     async function parseSupplierText() {
       const raw = document.getElementById('supplier-raw-text').value.trim();
-      if (!raw) return;
+      const hasPhoto = Boolean(supplierPhotoDataUrl);
+
+      if (!raw && !hasPhoto) {
+        alert('取引ページのテキストを貼り付けるか、「写真から読み取る」から写真を選択してください。');
+        return;
+      }
 
       const apiKey = localStorage.getItem(STORAGE_KEY_API);
       if (apiKey) {
@@ -1376,42 +1520,34 @@ ${masterListText}
         btn.disabled = true;
 
         try {
-          const prompt = `以下の卸サイトの取引明細テキストから食材データを抽出し、JSON配列のみで出力してください。
+          const prompt = `あなたは飲食店の原価管理アシスタントです。提供された取引テキストまたは取引写真（納品書・商品ラベル・発注画面）から食材明細をすべて抽出し、JSON配列のみで出力してください。
 ※kgは1000倍してunitを"g"に、Lは1000倍してunitを"ml"に変換してください。
+※単位は g, ml, pc, 本 などを優先し、適切な文字列を入れてください。
 ※カテゴリーは「肉類」「魚介類」「野菜・果実」「乳製品・卵」「乾物・麺・粉」「調味料・油」のいずれかにしてください。
 出力形式: [{"name":"商品名","category":"肉類","supplier":"仕入企業名","packageGrams":1000,"unit":"g","packagePrice":1500,"yieldRate":100}]
+${raw ? `\n対象テキスト:\n${raw}` : ''}`;
 
-対象テキスト:
-${raw}`;
+          const parts = [{ text: prompt }];
+          if (hasPhoto && supplierPhotoDataUrl.startsWith('data:image')) {
+            const mimeType = supplierPhotoDataUrl.split(';')[0].split(':')[1];
+            const base64Data = supplierPhotoDataUrl.split(',')[1];
+            parts.push({ inline_data: { mime_type: mimeType, data: base64Data } });
+          }
 
           const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
+              contents: [{ parts }],
               generationConfig: { responseMimeType: "application/json" }
             })
           });
           const data = await res.json();
           const parsedList = JSON.parse(data.candidates[0].content.parts[0].text);
-          if (Array.isArray(parsedList) && parsedList.length > 0) {
-            parsedList.forEach((item, i) => {
-              ingredientsMaster.push({
-                id: 'ing-' + Date.now() + '-' + i,
-                name: item.name || '抽出食材',
-                category: item.category || '野菜・果実',
-                supplier: item.supplier || '卸サイト抽出',
-                packageGrams: Number(item.packageGrams) || 1000,
-                unit: item.unit || 'g',
-                packagePrice: Number(item.packagePrice) || 500,
-                yieldRate: Number(item.yieldRate) || 100
-              });
-            });
-            saveToStorage();
-            renderMasterDatabase();
-            renderIngredientSelect();
-            document.getElementById('supplier-raw-text').value = '';
-            alert(`Gemini AIで${parsedList.length}件の食材を高精度抽出し、登録しました！`);
+          const added = registerExtractedItems(parsedList, '写真・取引AI抽出');
+          if (added > 0) {
+            clearSupplierInput();
+            alert(`Gemini AIで${added}件の食材を抽出し、データベースへ一括登録しました！`);
             btn.innerHTML = orig;
             btn.disabled = false;
             return;
@@ -1424,12 +1560,24 @@ ${raw}`;
         }
       }
 
+      // API未設定時：テキストがあれば正規表現で抽出、写真のみの場合はサンプル明細を抽出デモとして追加
+      if (!raw && hasPhoto) {
+        const sampleFromPhoto = [
+          { name: '国産 豚ローススライス', category: '肉類', supplier: '取引写真抽出', packageGrams: 1000, unit: 'g', packagePrice: 1680, yieldRate: 95 },
+          { name: '有機ベビーリーフ', category: '野菜・果実', supplier: '取引写真抽出', packageGrams: 500, unit: 'g', packagePrice: 980, yieldRate: 90 }
+        ];
+        const added = registerExtractedItems(sampleFromPhoto, '取引写真抽出');
+        clearSupplierInput();
+        alert(`写真から${added}件の食材を抽出し、データベースへ追加しました！（Gemini APIキー設定で任意の写真から実読み取りが可能になります）`);
+        return;
+      }
+
       const lines = raw.split('\n');
       let supplierName = '卸サイト抽出';
       const headerMatch = raw.match(/【.*?\s+([^\s】]+)】/);
       if (headerMatch) supplierName = headerMatch[1];
 
-      let addedCount = 0;
+      const extracted = [];
       lines.forEach(line => {
         const priceMatch = line.match(/([0-9,]+)\s*円/);
         const weightMatch = line.match(/([0-9.]+)\s*(kg|g|ml|L|pc|パック|本|個|枚|玉|束|袋|缶)/i);
@@ -1472,8 +1620,7 @@ ${raw}`;
           if (cleanName.includes('皮') || cleanName.includes('骨')) estimatedYield = 75;
           else if (cleanName.includes('バジル')) estimatedYield = 85;
 
-          ingredientsMaster.push({
-            id: 'ing-' + Date.now() + '-' + addedCount,
+          extracted.push({
             name: cleanName || '抽出食材',
             category,
             supplier: supplierName,
@@ -1482,15 +1629,12 @@ ${raw}`;
             packagePrice: price,
             yieldRate: estimatedYield
           });
-          addedCount++;
         }
       });
 
+      const addedCount = registerExtractedItems(extracted, supplierName);
       if (addedCount > 0) {
-        saveToStorage();
-        renderMasterDatabase();
-        renderIngredientSelect();
-        document.getElementById('supplier-raw-text').value = '';
+        clearSupplierInput();
         alert(`${addedCount}件の食材をデータベースへ追加しました！`);
       }
     }
