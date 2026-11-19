@@ -58,11 +58,14 @@
           <i class="fa-solid fa-utensils"></i>
         </div>
         <div>
-          <h1 class="text-lg font-bold tracking-wider flex items-center">
-            ChefCost AI
-            <span class="text-xs bg-amber-500/20 text-amber-400 border border-amber-400/30 px-2 py-0.5 rounded ml-2">PRO</span>
-            <span id="save-status-badge" class="text-[11px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded ml-2 font-normal">
+          <h1 class="text-lg font-bold tracking-wider flex items-center flex-wrap gap-1.5">
+            <span>ChefCost AI</span>
+            <span class="text-xs bg-amber-500/20 text-amber-400 border border-amber-400/30 px-2 py-0.5 rounded">PRO</span>
+            <span id="save-status-badge" class="text-[11px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-normal">
               <i class="fa-solid fa-check mr-1"></i>端末自動保存ON
+            </span>
+            <span id="header-lock-badge" onclick="openSettingsModal()" class="cursor-pointer text-[11px] bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded font-normal hover:border-amber-400 transition">
+              <i class="fa-solid fa-key mr-1"></i>AI未設定
             </span>
           </h1>
           <p class="text-xs text-slate-400">歩留まり・仕込み連動・A4ワンページ印刷対応 レシピ原価管理</p>
@@ -574,13 +577,13 @@
     </div>
   </div>
 
-  <!-- ==================== データ保存・バックアップ・Gemini API設定モーダル ==================== -->
+  <!-- ==================== データ保存・バックアップ・PIN暗号化API設定モーダル ==================== -->
   <div id="settings-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4 overflow-y-auto no-print">
     <div class="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl border border-slate-200">
       <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
         <div class="flex items-center space-x-2">
           <i class="fa-solid fa-shield-halved text-amber-400"></i>
-          <h3 class="text-base font-bold">データ管理・バックアップ・Gemini API連携設定</h3>
+          <h3 class="text-base font-bold">データ管理・バックアップ・PIN暗号化API設定</h3>
         </div>
         <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white text-xl px-2">
           <i class="fa-solid fa-xmark"></i>
@@ -589,25 +592,66 @@
 
       <div class="p-6 space-y-6 text-sm">
         
-        <!-- 1. Gemini APIキー設定 -->
+        <!-- 1. Gemini APIキー PIN暗号化保護セクション -->
         <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-          <div class="flex items-center justify-between">
+          <div class="flex flex-wrap items-center justify-between gap-2">
             <h4 class="font-bold text-slate-800 flex items-center">
-              <i class="fa-solid fa-key text-amber-500 mr-2"></i>1. Gemini APIキー設定（AI自動解析の有効化）
+              <i class="fa-solid fa-lock text-amber-500 mr-2"></i>1. Gemini APIキー設定（PIN暗証番号によるAES暗号化保存）
             </h4>
-            <span id="api-key-status" class="text-xs font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-600">未設定（デモモード）</span>
+            <span id="api-key-status" class="text-xs font-bold px-2.5 py-0.5 rounded bg-slate-200 text-slate-600">未設定（デモモード）</span>
           </div>
           <p class="text-xs text-slate-500 leading-relaxed">
-            APIキーを入力すると、実際の料理写真からの食材ピックアップや、取引テキスト・取引写真からの高精度AI解析が動作します。キーはこのブラウザ内部（LocalStorage）にのみ保存され、GitHub等の外部コードには一切公開されません。
+            APIキーをそのまま保存せず、あなたが決めた<strong>暗証番号（PIN）</strong>を使ってAES暗号化してブラウザ内に保存します。ブラウザを閉じると自動でロックされ、他人にブラウザを覗かれてもキーを読み取られる心配がありません。
           </p>
-          <div class="flex gap-2">
-            <input type="password" id="gemini-api-key-input" placeholder="AIzaSy... から始まるGemini APIキーを入力" class="flex-1 text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white font-mono focus:outline-none focus:border-amber-500">
-            <button onclick="saveApiKey()" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-xs rounded-lg transition whitespace-nowrap">
-              キーを保存
-            </button>
-            <button onclick="clearApiKey()" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-lg transition whitespace-nowrap">
-              消去
-            </button>
+
+          <!-- パターンA: 暗号化キーが保存済みで「ロック中」の画面 -->
+          <div id="api-locked-panel" class="hidden bg-amber-50 border border-amber-300 rounded-lg p-3.5 space-y-2.5">
+            <div class="flex items-center text-xs font-bold text-amber-900">
+              <i class="fa-solid fa-shield-cat text-amber-600 mr-1.5 text-sm"></i>
+              暗号化されたAPIキーが保護されています。AI機能を使うにはPINを入力してロック解除してください。
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <input type="password" id="unlock-pin-input" inputmode="numeric" placeholder="暗証番号 (PIN) を入力" onkeydown="if(event.key==='Enter') unlockApiKeyWithPin()" class="flex-1 min-w-[160px] text-xs border border-amber-300 rounded-lg px-3 py-2 bg-white font-mono focus:outline-none focus:border-amber-500">
+              <button onclick="unlockApiKeyWithPin()" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-xs rounded-lg transition whitespace-nowrap">
+                <i class="fa-solid fa-lock-open mr-1"></i> ロック解除
+              </button>
+              <button onclick="clearApiKey()" class="px-3 py-2 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 font-bold text-xs rounded-lg transition whitespace-nowrap">
+                キー削除
+              </button>
+            </div>
+          </div>
+
+          <!-- パターンB: ロック解除済みの画面 -->
+          <div id="api-unlocked-panel" class="hidden bg-emerald-50 border border-emerald-300 rounded-lg p-3.5 space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="text-xs font-bold text-emerald-900 flex items-center">
+                <i class="fa-solid fa-circle-check text-emerald-600 mr-1.5"></i>
+                ロック解除中（現在のセッションでAI解析が利用可能です）
+              </span>
+              <div class="flex gap-2">
+                <button onclick="lockApiKeyNow()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-lg transition">
+                  <i class="fa-solid fa-lock mr-1"></i> 今すぐロックする
+                </button>
+                <button onclick="clearApiKey()" class="px-3 py-1.5 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 font-bold text-xs rounded-lg transition">
+                  キー完全削除
+                </button>
+              </div>
+            </div>
+            <p class="text-[11px] text-emerald-700">※ブラウザのタブを閉じると自動的に再ロックされます。</p>
+          </div>
+
+          <!-- パターンC: 新規登録・再設定フォーム -->
+          <div id="api-setup-panel" class="space-y-2 pt-1">
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+              <input type="password" id="gemini-api-key-input" placeholder="AIzaSy... から始まるGemini APIキー" class="sm:col-span-7 text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white font-mono focus:outline-none focus:border-amber-500">
+              <input type="password" id="setup-pin-input" inputmode="numeric" placeholder="暗証番号PIN (4桁以上)" class="sm:col-span-5 text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white font-mono focus:outline-none focus:border-amber-500">
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-[11px] text-slate-400">※PINを忘れた場合は「キー削除」から再登録できます</span>
+              <button onclick="saveApiKeyWithPin()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition whitespace-nowrap">
+                <i class="fa-solid fa-lock mr-1 text-amber-400"></i> PINで暗号化して保存
+              </button>
+            </div>
           </div>
         </div>
 
@@ -617,7 +661,7 @@
             <i class="fa-solid fa-file-export text-indigo-600 mr-2"></i>2. データのバックアップ書き出し・別端末への復元
           </h4>
           <p class="text-xs text-slate-500 leading-relaxed">
-            現在登録されている「全食材データベース」と「保存済みレシピ帳」をJSONファイルとしてダウンロードできます。LINEやメールでスタッフに送って読み込ませることで簡単に共有できます。
+            現在登録されている「全食材データベース」と「保存済みレシピ帳」をJSONファイルとしてダウンロードできます。LINEやメールでスタッフに送って読み込ませることで簡単に共有できます（※APIキーはバックアップに含まれないため安全です）。
           </p>
           <div class="flex flex-wrap gap-3 pt-1">
             <button onclick="exportBackupJson()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition">
@@ -732,7 +776,8 @@
 
     const STORAGE_KEY_ING = 'chefcost_ingredients_v1';
     const STORAGE_KEY_REC = 'chefcost_recipes_v1';
-    const STORAGE_KEY_API = 'chefcost_gemini_api_key';
+    const STORAGE_KEY_ENC_API = 'chefcost_encrypted_api_v1';
+    const SESSION_KEY_UNLOCKED_API = 'chefcost_session_unlocked_api';
 
     let ingredientsMaster = [];
     let savedRecipes = [];
@@ -764,7 +809,76 @@
       ]
     };
 
-    // ====== 2. LocalStorage自動保存＆読み込み処理 ======
+    // ====== 2. Web Crypto API（PBKDF2 + AES-GCM）によるPIN暗号化・復号 ======
+    function bufToBase64(buf) {
+      return btoa(String.fromCharCode(...new Uint8Array(buf)));
+    }
+    function base64ToBuf(b64) {
+      return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    }
+
+    async function deriveAesKeyFromPin(pin, saltBytes) {
+      const enc = new TextEncoder();
+      const baseKey = await crypto.subtle.importKey(
+        'raw',
+        enc.encode(pin),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveKey']
+      );
+      return crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: saltBytes,
+          iterations: 100000,
+          hash: 'SHA-256'
+        },
+        baseKey,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+      );
+    }
+
+    async function encryptApiKeyWithPin(plainApiKey, pin) {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const aesKey = await deriveAesKeyFromPin(pin, salt);
+      const cipherBuf = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv },
+        aesKey,
+        new TextEncoder().encode(plainApiKey)
+      );
+      return JSON.stringify({
+        salt: bufToBase64(salt),
+        iv: bufToBase64(iv),
+        cipher: bufToBase64(cipherBuf)
+      });
+    }
+
+    async function decryptApiKeyWithPin(encryptedJsonStr, pin) {
+      const payload = JSON.parse(encryptedJsonStr);
+      const salt = base64ToBuf(payload.salt);
+      const iv = base64ToBuf(payload.iv);
+      const cipher = base64ToBuf(payload.cipher);
+      const aesKey = await deriveAesKeyFromPin(pin, salt);
+      const plainBuf = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv },
+        aesKey,
+        cipher
+      );
+      return new TextDecoder().decode(plainBuf);
+    }
+
+    function getActiveApiKey() {
+      return sessionStorage.getItem(SESSION_KEY_UNLOCKED_API) || '';
+    }
+
+    function hasEncryptedApiKey() {
+      return Boolean(localStorage.getItem(STORAGE_KEY_ENC_API));
+    }
+
+    // ====== 3. LocalStorage自動保存＆読み込み処理 ======
     function loadFromStorage() {
       try {
         const rawIng = localStorage.getItem(STORAGE_KEY_ING);
@@ -787,7 +901,7 @@
       }
     }
 
-    // ====== 3. 単価・原価・未定判定ユーティリティ ======
+    // ====== 4. 単価・原価・未定判定ユーティリティ ======
     function getUnitLabel(ing) {
       const u = (ing.unit || '').trim();
       return u.length > 0 ? u : 'g';
@@ -819,7 +933,7 @@
       });
     }
 
-    // ====== 4. 初期化＆タブ切り替え ======
+    // ====== 5. 初期化＆タブ切り替え ======
     function initApp() {
       loadFromStorage();
       renderMasterDatabase();
@@ -841,7 +955,7 @@
       });
     }
 
-    // ====== 5. レシピ作成＆番号付き調理手順エディタ ======
+    // ====== 6. レシピ作成＆番号付き調理手順エディタ ======
     function changeRecipeType(type) {
       currentRecipe.type = type;
       const isPrep = type === 'prep';
@@ -1194,7 +1308,6 @@
       }
     }
 
-    // 食材DBに存在しない名前を「未登録食材」としてDBへ追加し、そのIDを返す
     function ensureIngredientOrCreateUnregistered(name, unit = 'g') {
       const cleanName = (name || '').trim();
       if (!cleanName) return null;
@@ -1216,11 +1329,15 @@
       return newUnreg.id;
     }
 
-    // Gemini APIによる料理写真からの食材自動ピックアップ（未登録食材も自動DB登録＆レシピ反映）
+    // Gemini APIによる料理写真からの食材自動ピックアップ（ロック時はPIN解除画面を案内）
     async function analyzePhotoWithAI() {
-      const apiKey = localStorage.getItem(STORAGE_KEY_API);
+      const apiKey = getActiveApiKey();
       if (!apiKey) {
-        // API未設定デモ：未登録食材「彩りマイクロハーブ」を自動DB追加しつつレシピへ反映
+        if (hasEncryptedApiKey()) {
+          alert('APIキーがPINでロックされています。設定画面で暗証番号（PIN）を入力してロック解除してください。');
+          openSettingsModal();
+          return;
+        }
         const unregId = ensureIngredientOrCreateUnregistered('彩りマイクロハーブ', 'pc');
         loadPresetRecipe('bolognese');
         if (unregId && !currentRecipe.items.some(it => it.ingId === unregId)) {
@@ -1415,7 +1532,7 @@ ${masterListText}
       switchTab('saved');
     }
 
-    // ====== 6. 食材データベース管理 ======
+    // ====== 7. 食材データベース管理 ======
     function setDbViewMode(mode) {
       dbViewMode = mode;
       ['all', 'category', 'supplier'].forEach(m => {
@@ -1696,7 +1813,13 @@ ${masterListText}
         return;
       }
 
-      const apiKey = localStorage.getItem(STORAGE_KEY_API);
+      const apiKey = getActiveApiKey();
+      if (!apiKey && hasEncryptedApiKey()) {
+        alert('APIキーがPINでロックされています。設定画面で暗証番号（PIN）を入力してロック解除してください。');
+        openSettingsModal();
+        return;
+      }
+
       if (apiKey) {
         const btn = document.getElementById('btn-parse-supplier');
         const orig = btn.innerHTML;
@@ -1822,7 +1945,7 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
       }
     }
 
-    // ====== 7. 保存済みレシピ帳 ======
+    // ====== 8. 保存済みレシピ帳 ======
     function setSavedFilter(filter) {
       savedFilterMode = filter;
       ['all', 'menu', 'prep'].forEach(f => {
@@ -2058,10 +2181,11 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
       switchTab('recipe');
     }
 
-    // ====== 8. 設定モーダル（APIキー保存 ＆ JSONバックアップ書き出し/読み込み） ======
+    // ====== 9. 設定モーダル（PIN暗号化APIキー管理 ＆ JSONバックアップ） ======
     function openSettingsModal() {
-      const savedKey = localStorage.getItem(STORAGE_KEY_API) || '';
-      document.getElementById('gemini-api-key-input').value = savedKey;
+      document.getElementById('gemini-api-key-input').value = '';
+      document.getElementById('setup-pin-input').value = '';
+      document.getElementById('unlock-pin-input').value = '';
       updateApiKeyBadge();
       document.getElementById('settings-modal').classList.remove('hidden');
     }
@@ -2071,34 +2195,115 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
     }
 
     function updateApiKeyBadge() {
-      const savedKey = localStorage.getItem(STORAGE_KEY_API);
+      const isEncryptedStored = hasEncryptedApiKey();
+      const isUnlocked = Boolean(getActiveApiKey());
+
       const badge = document.getElementById('api-key-status');
-      if (!badge) return;
-      if (savedKey && savedKey.startsWith('AIza')) {
-        badge.textContent = 'API連携 有効';
-        badge.className = 'text-xs font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800';
+      const headerBadge = document.getElementById('header-lock-badge');
+      const lockedPanel = document.getElementById('api-locked-panel');
+      const unlockedPanel = document.getElementById('api-unlocked-panel');
+      const setupPanel = document.getElementById('api-setup-panel');
+
+      if (isUnlocked) {
+        if (badge) {
+          badge.textContent = 'ロック解除中（AI有効）';
+          badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800';
+        }
+        if (headerBadge) {
+          headerBadge.innerHTML = '<i class="fa-solid fa-lock-open text-emerald-400 mr-1"></i>AI解除中';
+          headerBadge.className = 'cursor-pointer text-[11px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded font-normal hover:bg-emerald-500/30 transition';
+        }
+        if (lockedPanel) lockedPanel.classList.add('hidden');
+        if (unlockedPanel) unlockedPanel.classList.remove('hidden');
+        if (setupPanel) setupPanel.classList.add('hidden');
+      } else if (isEncryptedStored) {
+        if (badge) {
+          badge.textContent = 'PINロック中（暗号化保護）';
+          badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded bg-amber-100 text-amber-800';
+        }
+        if (headerBadge) {
+          headerBadge.innerHTML = '<i class="fa-solid fa-lock text-amber-400 mr-1"></i>AIロック中';
+          headerBadge.className = 'cursor-pointer text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-normal hover:bg-amber-500/30 transition';
+        }
+        if (lockedPanel) lockedPanel.classList.remove('hidden');
+        if (unlockedPanel) unlockedPanel.classList.add('hidden');
+        if (setupPanel) setupPanel.classList.add('hidden');
       } else {
-        badge.textContent = '未設定（デモモード）';
-        badge.className = 'text-xs font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-600';
+        if (badge) {
+          badge.textContent = '未設定（デモモード）';
+          badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded bg-slate-200 text-slate-600';
+        }
+        if (headerBadge) {
+          headerBadge.innerHTML = '<i class="fa-solid fa-key mr-1"></i>AI未設定';
+          headerBadge.className = 'cursor-pointer text-[11px] bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded font-normal hover:border-amber-400 transition';
+        }
+        if (lockedPanel) lockedPanel.classList.add('hidden');
+        if (unlockedPanel) unlockedPanel.classList.add('hidden');
+        if (setupPanel) setupPanel.classList.remove('hidden');
       }
     }
 
-    function saveApiKey() {
-      const val = document.getElementById('gemini-api-key-input').value.trim();
-      if (!val) {
-        alert('APIキーを入力してください。');
+    async function saveApiKeyWithPin() {
+      const apiKeyVal = document.getElementById('gemini-api-key-input').value.trim();
+      const pinVal = document.getElementById('setup-pin-input').value.trim();
+
+      if (!apiKeyVal) {
+        alert('Gemini APIキーを入力してください。');
         return;
       }
-      localStorage.setItem(STORAGE_KEY_API, val);
+      if (pinVal.length < 4) {
+        alert('セキュリティ保護のため、暗証番号（PIN）は4桁以上で設定してください。');
+        return;
+      }
+
+      try {
+        const encryptedPayload = await encryptApiKeyWithPin(apiKeyVal, pinVal);
+        localStorage.setItem(STORAGE_KEY_ENC_API, encryptedPayload);
+        sessionStorage.setItem(SESSION_KEY_UNLOCKED_API, apiKeyVal);
+
+        document.getElementById('gemini-api-key-input').value = '';
+        document.getElementById('setup-pin-input').value = '';
+        updateApiKeyBadge();
+        alert('APIキーを暗証番号（PIN）でAES暗号化して保存しました！');
+      } catch (e) {
+        alert('暗号化保存に失敗しました。HTTPS環境（GitHub Pages等）でお試しください。');
+      }
+    }
+
+    async function unlockApiKeyWithPin() {
+      const pinVal = document.getElementById('unlock-pin-input').value.trim();
+      const encStr = localStorage.getItem(STORAGE_KEY_ENC_API);
+      if (!encStr) return;
+      if (!pinVal) {
+        alert('暗証番号（PIN）を入力してください。');
+        return;
+      }
+
+      try {
+        const decryptedKey = await decryptApiKeyWithPin(encStr, pinVal);
+        sessionStorage.setItem(SESSION_KEY_UNLOCKED_API, decryptedKey);
+        document.getElementById('unlock-pin-input').value = '';
+        updateApiKeyBadge();
+        alert('PIN認証に成功し、APIキーのロックを解除しました！');
+      } catch (e) {
+        alert('暗証番号（PIN）が正しくありません。');
+      }
+    }
+
+    function lockApiKeyNow() {
+      sessionStorage.removeItem(SESSION_KEY_UNLOCKED_API);
       updateApiKeyBadge();
-      alert('Gemini APIキーをブラウザ内に安全に保存しました！');
+      alert('APIキーをロックしました。再度AI機能を使う際はPINの入力が必要です。');
     }
 
     function clearApiKey() {
-      localStorage.removeItem(STORAGE_KEY_API);
+      localStorage.removeItem(STORAGE_KEY_ENC_API);
+      sessionStorage.removeItem(SESSION_KEY_UNLOCKED_API);
       document.getElementById('gemini-api-key-input').value = '';
+      document.getElementById('setup-pin-input').value = '';
+      document.getElementById('unlock-pin-input').value = '';
       updateApiKeyBadge();
-      alert('APIキーを消去しました。');
+      alert('暗号化保存されていたAPIキーを完全に消去しました。');
     }
 
     function exportBackupJson() {
@@ -2155,7 +2360,7 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
       closeSettingsModal();
     }
 
-    // ====== 9. A4・1ページ印刷 ======
+    // ====== 10. A4・1ページ印刷 ======
     function triggerDirectPrint(recId) {
       activeModalRecipeId = recId;
       printSelectedRecipe();
