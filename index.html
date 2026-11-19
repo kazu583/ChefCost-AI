@@ -131,7 +131,7 @@
               <div id="photo-placeholder" class="py-4">
                 <i class="fa-solid fa-images text-3xl text-slate-400 mb-2"></i>
                 <p class="text-sm font-bold text-slate-700">完成図の写真を選択</p>
-                <p class="text-xs text-slate-400 mt-1 mb-3">自動で高画質のまま軽量化（横幅800px）して保存します</p>
+                <p class="text-xs text-slate-400 mt-1 mb-3">未登録の食材も自動抽出してDB＆レシピに反映します</p>
                 <label for="photo-input" class="inline-flex items-center px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-xs rounded-lg shadow-sm cursor-pointer transition">
                   <i class="fa-solid fa-folder-open mr-1.5"></i> 写真フォルダ・カメラから選ぶ
                 </label>
@@ -252,7 +252,7 @@
                 </button>
               </div>
 
-              <!-- 未登録食材の直接打ち込みフォーム（規格容量・仕入価格未入力OK / 類似サジェスト対応） -->
+              <!-- 未登録食材の直接打ち込みフォーム -->
               <div id="direct-inline-form" class="hidden bg-amber-50/70 border border-amber-200 rounded-xl p-3 space-y-2 text-xs">
                 <div class="flex flex-wrap items-center gap-2">
                   <span class="font-bold text-amber-900 whitespace-nowrap">直接打ち込み:</span>
@@ -441,6 +441,7 @@
             <option value="乾物・麺・粉">乾物・麺・粉</option>
             <option value="調味料・油">調味料・油</option>
             <option value="仕込み品">仕込み品</option>
+            <option value="未登録食材">未登録食材</option>
           </select>
 
           <input type="text" id="new-ing-sup" placeholder="仕入企業名" class="w-40 border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-amber-500">
@@ -737,7 +738,7 @@
     let savedRecipes = [];
     let supplierPhotoDataUrl = '';
 
-    const categoryList = ['肉類', '魚介類', '野菜・果実', '乳製品・卵', '乾物・麺・粉', '調味料・油', '仕込み品'];
+    const categoryList = ['肉類', '魚介類', '野菜・果実', '乳製品・卵', '乾物・麺・粉', '調味料・油', '仕込み品', '未登録食材'];
     let dbViewMode = 'all';
     let savedFilterMode = 'all';
     let activeModalRecipeId = null;
@@ -792,7 +793,6 @@
       return u.length > 0 ? u : 'g';
     }
 
-    // 規格容量または仕入価格が未入力（0または空）かどうかを判定
     function isIngredientCostUndefined(ing) {
       const pkg = Number(ing.packageGrams);
       const price = Number(ing.packagePrice);
@@ -811,7 +811,6 @@
       return base / (validYield / 100);
     }
 
-    // レシピ内に単価未入力（¥0）の食材が含まれるか判定
     function hasUndefinedCostInRecipe(rec) {
       if (!rec || !Array.isArray(rec.items)) return false;
       return rec.items.some(item => {
@@ -912,8 +911,11 @@
         const rowCost = effectiveCost * item.usedGrams;
 
         const isPrepItem = ing.category === '仕込み品';
+        const isUnregItem = ing.category === '未登録食材';
         const badgeHtml = isPrepItem
           ? `<span class="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded mr-1">仕込み品</span>`
+          : isUnregItem
+          ? `<span class="text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.5 rounded mr-1">未登録食材</span>`
           : `<span class="text-[10px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded mr-1">${ing.category}</span>`;
 
         const undefBadge = isUndef
@@ -988,13 +990,11 @@
       renderRecipeTable();
     }
 
-    // 未登録食材の直接打ち込みフォーム開閉
     function toggleDirectInlineForm() {
       document.getElementById('direct-inline-form').classList.toggle('hidden');
       updateSimilarSuggestions(document.getElementById('inline-ing-name').value);
     }
 
-    // 既存の食材データベースから似た名前を検索してサジェスト表示
     function updateSimilarSuggestions(keyword) {
       const box = document.getElementById('similar-suggestion-box');
       const btnWrap = document.getElementById('similar-suggestion-buttons');
@@ -1040,7 +1040,6 @@
       renderRecipeTable();
     }
 
-    // 未登録食材を直接打ち込んで追加（規格容量・仕入価格が未入力でも追加でき、¥0扱いになる）
     function addDirectInlineIngredient() {
       const name = document.getElementById('inline-ing-name').value.trim();
       const rawPkg = document.getElementById('inline-ing-pkg').value;
@@ -1113,7 +1112,6 @@
       document.getElementById('cost-rate').textContent = costRate.toFixed(1);
       document.getElementById('gross-profit').textContent = Math.round(grossProfit).toLocaleString();
 
-      // 仮計算表示の切り替え
       document.getElementById('editor-provisional-badge').classList.toggle('hidden', !hasUndef);
       document.getElementById('provisional-rate-tag').classList.toggle('hidden', !hasUndef);
       const modeNote = document.getElementById('calc-mode-note');
@@ -1196,12 +1194,44 @@
       }
     }
 
-    // Gemini APIによる料理写真からの食材自動ピックアップ
+    // 食材DBに存在しない名前を「未登録食材」としてDBへ追加し、そのIDを返す
+    function ensureIngredientOrCreateUnregistered(name, unit = 'g') {
+      const cleanName = (name || '').trim();
+      if (!cleanName) return null;
+
+      const existing = ingredientsMaster.find(m => m.name.toLowerCase() === cleanName.toLowerCase());
+      if (existing) return existing.id;
+
+      const newUnreg = {
+        id: 'ing-unreg-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        name: cleanName,
+        category: '未登録食材',
+        supplier: '写真AI抽出',
+        packageGrams: 0,
+        unit: (unit || 'g').trim() || 'g',
+        packagePrice: 0,
+        yieldRate: 100
+      };
+      ingredientsMaster.push(newUnreg);
+      return newUnreg.id;
+    }
+
+    // Gemini APIによる料理写真からの食材自動ピックアップ（未登録食材も自動DB登録＆レシピ反映）
     async function analyzePhotoWithAI() {
       const apiKey = localStorage.getItem(STORAGE_KEY_API);
       if (!apiKey) {
-        alert('実際の料理写真をAI解析するには、画面右上の「データ管理・API設定」からGemini APIキーを登録してください。\n（現在はサンプルレシピを反映します）');
+        // API未設定デモ：未登録食材「彩りマイクロハーブ」を自動DB追加しつつレシピへ反映
+        const unregId = ensureIngredientOrCreateUnregistered('彩りマイクロハーブ', 'pc');
         loadPresetRecipe('bolognese');
+        if (unregId && !currentRecipe.items.some(it => it.ingId === unregId)) {
+          currentRecipe.items.push({ ingId: unregId, usedGrams: 1, customYield: 100 });
+        }
+        saveToStorage();
+        renderMasterDatabase();
+        renderIngredientSelect();
+        renderRecipeTable();
+        renderSavedRecipes();
+        alert('デモ抽出を実行しました！食材DBに未登録だった「彩りマイクロハーブ」を【未登録食材】としてDB＆使用食材欄に自動反映しました。（本番AI解析には右上のAPIキー設定が必要です）');
         return;
       }
 
@@ -1220,7 +1250,10 @@
         const base64Data = currentRecipe.photoUrl.split(',')[1];
         const masterListText = ingredientsMaster.map(m => `ID:${m.id} | 名称:${m.name} | 単位:${m.unit || 'g'}`).join('\n');
 
-        const prompt = `あなたはプロの料理長です。添付された料理の写真を見て、以下の「店舗登録済み食材リスト」の中から使われている可能性が高い食材を選び出し、1人前の推定使用量と調理手順をJSON形式のみで出力してください。
+        const prompt = `あなたはプロの料理長です。添付された料理の写真を見て、使用されている食材と1人前の推定使用量をJSON形式のみで出力してください。
+まずは以下の「店舗登録済み食材リスト」から一致・類似するものを優先して"ingId"に入れてください。
+リストにない食材が写真に見えている場合でも省略せず、"ingId": null にし、"unregisteredName": "食材名", "unit": "g" を指定して必ず出力してください。
+
 【店舗登録済み食材リスト】
 ${masterListText}
 
@@ -1228,7 +1261,9 @@ ${masterListText}
 {
   "dishName": "推定される料理名",
   "finishedWeight": 300,
-  "items": [{"ingId": "リスト内のID", "usedGrams": 100}],
+  "items": [
+    {"ingId": "リスト内のIDまたはnull", "unregisteredName": "未登録時の食材名", "unit": "g", "usedGrams": 100}
+  ],
   "steps": ["手順1", "手順2", "手順3"]
 }`;
 
@@ -1252,18 +1287,44 @@ ${masterListText}
 
         if (parsed.dishName) document.getElementById('recipe-name').value = parsed.dishName;
         if (parsed.finishedWeight) document.getElementById('finished-weight').value = parsed.finishedWeight;
+
+        let addedUnregCount = 0;
         if (Array.isArray(parsed.items) && parsed.items.length > 0) {
-          currentRecipe.items = parsed.items.filter(it => ingredientsMaster.some(m => m.id === it.ingId)).map(it => {
-            const ing = ingredientsMaster.find(m => m.id === it.ingId);
-            return { ingId: it.ingId, usedGrams: Number(it.usedGrams) || 50, customYield: ing ? ing.yieldRate : 100 };
+          const nextItems = [];
+          parsed.items.forEach(it => {
+            let targetIng = ingredientsMaster.find(m => m.id === it.ingId);
+            if (!targetIng && it.unregisteredName) {
+              const createdId = ensureIngredientOrCreateUnregistered(it.unregisteredName, it.unit || 'g');
+              if (createdId) {
+                targetIng = ingredientsMaster.find(m => m.id === createdId);
+                addedUnregCount++;
+              }
+            }
+            if (targetIng) {
+              nextItems.push({
+                ingId: targetIng.id,
+                usedGrams: Number(it.usedGrams) || 50,
+                customYield: targetIng.yieldRate
+              });
+            }
           });
+          if (nextItems.length > 0) currentRecipe.items = nextItems;
         }
+
         if (Array.isArray(parsed.steps) && parsed.steps.length > 0) {
           currentRecipe.steps = parsed.steps;
         }
 
+        saveToStorage();
+        renderMasterDatabase();
+        renderIngredientSelect();
         renderRecipeTable();
         renderStepsEditor();
+        renderSavedRecipes();
+
+        if (addedUnregCount > 0) {
+          alert(`写真から${addedUnregCount}件の未登録食材を検出し、食材データベースと使用食材欄に自動反映しました！`);
+        }
       } catch (err) {
         alert('AI解析中にエラーが発生しました。APIキーや通信状況をご確認ください。');
       } finally {
@@ -1354,7 +1415,7 @@ ${masterListText}
       switchTab('saved');
     }
 
-    // ====== 6. 食材データベース管理（写真添付一括登録・DB修正のレシピ連動・ワンクリック削除） ======
+    // ====== 6. 食材データベース管理 ======
     function setDbViewMode(mode) {
       dbViewMode = mode;
       ['all', 'category', 'supplier'].forEach(m => {
@@ -1414,18 +1475,26 @@ ${masterListText}
           const idx = ingredientsMaster.findIndex(m => m.id === ing.id);
           const unit = getUnitLabel(ing);
           const isUndef = isIngredientCostUndefined(ing);
+          const isUnreg = ing.category === '未登録食材';
           const effCost = getEffectiveUnitCost(ing, ing.yieldRate);
 
           const catOptions = categoryList.map(c =>
             `<option value="${c}" ${ing.category === c ? 'selected' : ''}>${c}</option>`
           ).join('');
 
+          const unregTag = isUnreg
+            ? `<span class="text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.5 rounded ml-1.5">未登録</span>`
+            : '';
+
           rowsHtml += `
             <tr class="hover:bg-slate-50 border-t border-slate-200">
               <td class="py-2.5 px-3">
-                <input type="text" value="${ing.name}"
-                  onchange="updateMasterField(${idx}, 'name', this.value)"
-                  class="w-full min-w-[200px] font-bold text-slate-800 border border-transparent hover:border-slate-300 focus:border-amber-500 rounded px-2 py-1 bg-transparent focus:bg-white focus:outline-none">
+                <div class="flex items-center">
+                  <input type="text" value="${ing.name}"
+                    onchange="updateMasterField(${idx}, 'name', this.value)"
+                    class="w-full min-w-[180px] font-bold text-slate-800 border border-transparent hover:border-slate-300 focus:border-amber-500 rounded px-2 py-1 bg-transparent focus:bg-white focus:outline-none">
+                  ${unregTag}
+                </div>
               </td>
               <td class="py-2.5 px-3 whitespace-nowrap w-36">
                 <select onchange="updateMasterField(${idx}, 'category', this.value)"
@@ -1753,7 +1822,7 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
       }
     }
 
-    // ====== 7. 保存済みレシピ帳（単価未入力件数区別・仮計算バッジ表示） ======
+    // ====== 7. 保存済みレシピ帳 ======
     function setSavedFilter(filter) {
       savedFilterMode = filter;
       ['all', 'menu', 'prep'].forEach(f => {
