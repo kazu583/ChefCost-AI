@@ -201,8 +201,11 @@
             <!-- レシピ基本情報ヘッダー -->
             <div class="flex flex-wrap justify-between items-start gap-4 pb-4 border-b border-slate-200">
               <div class="flex-1 min-w-[240px]">
-                <div class="flex items-center space-x-2 mb-1">
+                <div class="flex flex-wrap items-center gap-2 mb-1">
                   <span id="badge-recipe-type" class="text-xs font-bold px-2.5 py-0.5 rounded bg-amber-100 text-amber-800">グランドメニュー</span>
+                  <span id="editor-provisional-badge" class="hidden text-xs font-bold px-2.5 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-200">
+                    <i class="fa-solid fa-triangle-exclamation mr-1"></i>単価未定あり（仮計算）
+                  </span>
                   <span class="text-xs text-slate-400">STEP 2: 食材・使用量・歩留まりの調整</span>
                 </div>
                 <input type="text" id="recipe-name" value="特製ボロネーゼ パスタ" placeholder="メニュー名 / 仕込み品名を入力" class="w-full text-xl font-bold text-slate-800 border-b-2 border-slate-200 focus:border-amber-500 focus:outline-none py-1">
@@ -235,7 +238,7 @@
               </table>
             </div>
 
-            <!-- 食材を手動で追加するバー（登録マスタ選択 ＋ 未登録食材の直接打ち込み追加） -->
+            <!-- 食材を手動で追加するバー -->
             <div class="mt-4 pt-3 border-t border-slate-100 space-y-2.5">
               <div class="flex flex-wrap items-center gap-2">
                 <select id="add-ingredient-select" class="flex-1 min-w-[220px] text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500 bg-white">
@@ -249,39 +252,52 @@
                 </button>
               </div>
 
-              <!-- 未登録食材の直接打ち込みフォーム（食材DBへ自動登録＆レシピ行へ追加＆DB修正がレシピへ連動） -->
-              <div id="direct-inline-form" class="hidden bg-amber-50/70 border border-amber-200 rounded-xl p-3 flex flex-wrap items-center gap-2 text-xs">
-                <span class="font-bold text-amber-900 whitespace-nowrap">直接打ち込み:</span>
-                <input type="text" id="inline-ing-name" placeholder="食材名 (例: 特製レモンソース)" class="flex-1 min-w-[150px] border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:border-amber-500">
-                
-                <div class="inline-flex items-center border border-slate-300 rounded-lg bg-white px-2 py-1 whitespace-nowrap">
-                  <span class="text-slate-400 mr-1">規格</span>
-                  <input type="number" id="inline-ing-pkg" placeholder="容量" min="0.01" step="any" class="w-16 text-right focus:outline-none">
-                  <input type="text" id="inline-ing-unit" list="unit-options" value="g" class="w-11 ml-1 pl-1 border-l border-slate-200 text-center font-bold text-slate-700 bg-transparent focus:outline-none">
+              <!-- 未登録食材の直接打ち込みフォーム（規格容量・仕入価格未入力OK / 類似サジェスト対応） -->
+              <div id="direct-inline-form" class="hidden bg-amber-50/70 border border-amber-200 rounded-xl p-3 space-y-2 text-xs">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-bold text-amber-900 whitespace-nowrap">直接打ち込み:</span>
+                  <input type="text" id="inline-ing-name" placeholder="食材名 (例: 特製レモンソース)" oninput="updateSimilarSuggestions(this.value)" class="flex-1 min-w-[160px] border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:border-amber-500">
+                  
+                  <div class="inline-flex items-center border border-slate-300 rounded-lg bg-white px-2 py-1 whitespace-nowrap">
+                    <span class="text-slate-400 mr-1">規格</span>
+                    <input type="number" id="inline-ing-pkg" placeholder="未入力可" min="0.01" step="any" class="w-16 text-right focus:outline-none">
+                    <input type="text" id="inline-ing-unit" list="unit-options" value="g" class="w-11 ml-1 pl-1 border-l border-slate-200 text-center font-bold text-slate-700 bg-transparent focus:outline-none">
+                  </div>
+
+                  <div class="inline-flex items-center border border-slate-300 rounded-lg bg-white px-2 py-1 whitespace-nowrap">
+                    <span class="text-slate-500 font-bold mr-1">¥</span>
+                    <input type="number" id="inline-ing-price" placeholder="未入力可" min="0" class="w-16 text-right focus:outline-none">
+                  </div>
+
+                  <div class="inline-flex items-center border border-amber-400 rounded-lg bg-white px-2 py-1 whitespace-nowrap">
+                    <span class="text-amber-700 font-bold mr-1">今回使用</span>
+                    <input type="number" id="inline-ing-used" placeholder="使用量" value="50" min="0" step="any" class="w-14 text-right font-bold focus:outline-none">
+                  </div>
+
+                  <button onclick="addDirectInlineIngredient()" class="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-lg transition whitespace-nowrap">
+                    追加してDB連動
+                  </button>
                 </div>
 
-                <div class="inline-flex items-center border border-slate-300 rounded-lg bg-white px-2 py-1 whitespace-nowrap">
-                  <span class="text-slate-500 font-bold mr-1">¥</span>
-                  <input type="number" id="inline-ing-price" placeholder="仕入価格" min="1" class="w-16 text-right focus:outline-none">
+                <!-- 類似食材サジェスト表示エリア -->
+                <div id="similar-suggestion-box" class="hidden bg-white border border-amber-300 rounded-lg p-2 flex flex-wrap items-center gap-2">
+                  <span class="text-[11px] font-bold text-amber-800"><i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i>登録済みの似た食材があります：</span>
+                  <div id="similar-suggestion-buttons" class="flex flex-wrap gap-1.5"></div>
                 </div>
-
-                <div class="inline-flex items-center border border-amber-400 rounded-lg bg-white px-2 py-1 whitespace-nowrap">
-                  <span class="text-amber-700 font-bold mr-1">今回使用</span>
-                  <input type="number" id="inline-ing-used" placeholder="使用量" value="50" min="0" step="any" class="w-14 text-right font-bold focus:outline-none">
-                </div>
-
-                <button onclick="addDirectInlineIngredient()" class="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-lg transition whitespace-nowrap">
-                  追加してDB連動
-                </button>
               </div>
             </div>
 
             <!-- STEP 3: 仕上がり量・販売価格・原価率パネル -->
             <div class="mt-6 pt-6 border-t-2 border-slate-200">
-              <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center">
-                <span class="bg-amber-500 text-slate-900 w-5 h-5 rounded-full inline-flex items-center justify-center text-xs font-bold mr-2">3</span>
-                仕上がり量・販売価格の入力と原価シミュレーション
-              </h3>
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <h3 class="text-sm font-bold text-slate-700 flex items-center">
+                  <span class="bg-amber-500 text-slate-900 w-5 h-5 rounded-full inline-flex items-center justify-center text-xs font-bold mr-2">3</span>
+                  仕上がり量・販売価格の入力と原価シミュレーション
+                </h3>
+                <span id="calc-mode-note" class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded">
+                  確定単価ベースで計算中
+                </span>
+              </div>
 
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 
@@ -319,7 +335,7 @@
                 <div id="profit-card" class="bg-amber-50 border border-amber-200 p-4 rounded-xl flex flex-col justify-between">
                   <div class="flex justify-between items-start">
                     <div>
-                      <span class="text-xs font-bold text-amber-900">原価率</span>
+                      <span class="text-xs font-bold text-amber-900">原価率 <span id="provisional-rate-tag" class="hidden text-rose-700 font-bold">(仮計算)</span></span>
                       <div class="text-3xl font-bold text-slate-900 mt-1">
                         <span id="cost-rate">0.0</span><span class="text-lg">%</span>
                       </div>
@@ -341,7 +357,7 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 2: 店舗登録済み 食材データベース (フルワイド＋テキスト＆写真一括登録＋ワンクリック削除) ==================== -->
+    <!-- ==================== TAB 2: 店舗登録済み 食材データベース ==================== -->
     <section id="view-ingredients" class="hidden space-y-6">
       
       <!-- 上段：卸サイトの取引ページ（テキスト貼付 または 写真添付）から一括登録 -->
@@ -431,7 +447,7 @@
 
           <!-- 規格容量 + 単位(選択＆自由入力) 横並び -->
           <div class="inline-flex items-center border border-slate-300 rounded-lg bg-white px-2.5 py-1.5 focus-within:border-amber-500 whitespace-nowrap">
-            <input type="number" id="new-ing-pkg" placeholder="規格容量" min="1" step="any" class="w-20 text-right focus:outline-none">
+            <input type="number" id="new-ing-pkg" placeholder="未入力可" min="0.01" step="any" class="w-20 text-right focus:outline-none">
             <input type="text" id="new-ing-unit" list="unit-options" value="g" placeholder="単位"
               class="w-14 ml-1.5 pl-1.5 border-l border-slate-200 text-center text-slate-700 font-bold bg-transparent focus:outline-none"
               title="クリックで候補（g, ml, pc, 本など）を選択、または自由に文字を入力">
@@ -440,7 +456,7 @@
           <!-- 仕入価格 (¥ 横並び) -->
           <div class="inline-flex items-center border border-slate-300 rounded-lg bg-white px-2.5 py-1.5 focus-within:border-amber-500 whitespace-nowrap">
             <span class="text-slate-500 font-bold mr-1">¥</span>
-            <input type="number" id="new-ing-price" placeholder="仕入価格" min="1" class="w-20 text-right focus:outline-none">
+            <input type="number" id="new-ing-price" placeholder="未入力可" min="0" class="w-20 text-right focus:outline-none">
           </div>
 
           <button onclick="addManualIngredient()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg px-5 py-2 whitespace-nowrap transition shadow-sm">
@@ -462,9 +478,14 @@
       <!-- レシピ帳全体の原価率サマリーダッシュボード -->
       <div class="bg-slate-900 text-white p-5 rounded-xl shadow-sm grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div class="sm:col-span-2 flex flex-col justify-center border-b sm:border-b-0 sm:border-r border-slate-800 pb-3 sm:pb-0 sm:pr-4">
-          <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Menu Book Total Cost Rate</span>
-          <h2 class="text-lg font-bold mt-0.5">保存済みグランドメニュー全体の原価率集計</h2>
-          <p class="text-xs text-slate-400 mt-1">登録されている全販売メニューの合計原価と合計販売価格から算出した店舗全体の基準原価率です。</p>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Menu Book Total Cost Rate</span>
+            <span id="book-provisional-count-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-400/30">
+              単価未入力を含むレシピ: <strong id="book-provisional-count">0</strong> 件
+            </span>
+          </div>
+          <h2 class="text-lg font-bold mt-1">保存済みグランドメニュー全体の原価率集計</h2>
+          <p class="text-xs text-slate-400 mt-1">単価未入力の食材を含むレシピは「仮計算」として件数区別し、カードや詳細画面でひと目で判別できます。</p>
         </div>
         <div class="bg-slate-800/80 p-3.5 rounded-lg flex flex-col justify-between">
           <span class="text-xs text-slate-400">レシピ帳 全体原価率 (加重平均)</span>
@@ -524,8 +545,9 @@
       
       <!-- モーダルヘッダー -->
       <div class="sticky top-0 bg-slate-900 text-white px-6 py-4 flex flex-wrap justify-between items-center gap-2 z-10">
-        <div class="flex items-center space-x-2">
+        <div class="flex flex-wrap items-center gap-2">
           <span id="modal-recipe-badge" class="text-xs font-bold px-2.5 py-0.5 rounded bg-amber-500 text-slate-900">グランドメニュー</span>
+          <span id="modal-provisional-badge" class="hidden text-xs font-bold px-2.5 py-0.5 rounded bg-rose-500 text-white">単価未定あり（仮計算）</span>
           <h3 id="modal-recipe-title" class="text-lg font-bold">レシピ詳細</h3>
         </div>
         <div class="flex items-center space-x-2">
@@ -764,20 +786,38 @@
       }
     }
 
-    // ====== 3. 計算ユーティリティ ======
+    // ====== 3. 単価・原価・未定判定ユーティリティ ======
     function getUnitLabel(ing) {
       const u = (ing.unit || '').trim();
       return u.length > 0 ? u : 'g';
     }
 
+    // 規格容量または仕入価格が未入力（0または空）かどうかを判定
+    function isIngredientCostUndefined(ing) {
+      const pkg = Number(ing.packageGrams);
+      const price = Number(ing.packagePrice);
+      return !(pkg > 0 && price > 0);
+    }
+
     function getBaseUnitCost(ing) {
-      return ing.packagePrice / Math.max(0.0001, Number(ing.packageGrams) || 1);
+      if (isIngredientCostUndefined(ing)) return 0;
+      return Number(ing.packagePrice) / Number(ing.packageGrams);
     }
 
     function getEffectiveUnitCost(ing, yieldRate) {
       const base = getBaseUnitCost(ing);
+      if (base <= 0) return 0;
       const validYield = Math.max(1, Math.min(100, Number(yieldRate) || 100));
       return base / (validYield / 100);
+    }
+
+    // レシピ内に単価未入力（¥0）の食材が含まれるか判定
+    function hasUndefinedCostInRecipe(rec) {
+      if (!rec || !Array.isArray(rec.items)) return false;
+      return rec.items.some(item => {
+        const ing = ingredientsMaster.find(m => m.id === item.ingId);
+        return !ing || isIngredientCostUndefined(ing);
+      });
     }
 
     // ====== 4. 初期化＆タブ切り替え ======
@@ -865,6 +905,7 @@
         if (!ing) return;
 
         const unit = getUnitLabel(ing);
+        const isUndef = isIngredientCostUndefined(ing);
         const baseUnitCost = getBaseUnitCost(ing);
         const yieldVal = item.customYield !== undefined ? item.customYield : ing.yieldRate;
         const effectiveCost = getEffectiveUnitCost(ing, yieldVal);
@@ -875,13 +916,17 @@
           ? `<span class="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded mr-1">仕込み品</span>`
           : `<span class="text-[10px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded mr-1">${ing.category}</span>`;
 
+        const undefBadge = isUndef
+          ? `<span class="text-[10px] font-bold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded ml-1">単価未定(¥0)</span>`
+          : '';
+
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-slate-50 transition';
         tr.innerHTML = `
           <td class="py-2.5 px-2 font-medium text-slate-800">
-            ${badgeHtml}${ing.name}
+            ${badgeHtml}${ing.name}${undefBadge}
           </td>
-          <td class="py-2.5 px-2 text-right text-xs text-slate-500 font-mono whitespace-nowrap">
+          <td class="py-2.5 px-2 text-right text-xs ${isUndef ? 'text-rose-500 font-bold' : 'text-slate-500'} font-mono whitespace-nowrap">
             ¥${baseUnitCost.toFixed(2)}/${unit}
           </td>
           <td class="py-2.5 px-2 text-center whitespace-nowrap">
@@ -892,7 +937,7 @@
               <span class="text-xs text-slate-500 ml-1">%</span>
             </div>
           </td>
-          <td class="py-2.5 px-2 text-right text-xs font-bold text-slate-700 font-mono whitespace-nowrap">
+          <td class="py-2.5 px-2 text-right text-xs font-bold ${isUndef ? 'text-rose-500' : 'text-slate-700'} font-mono whitespace-nowrap">
             ¥${effectiveCost.toFixed(2)}/${unit}
           </td>
           <td class="py-2.5 px-2 text-center whitespace-nowrap">
@@ -903,7 +948,7 @@
               <span class="text-xs text-slate-600 font-bold ml-1">${unit}</span>
             </div>
           </td>
-          <td class="py-2.5 px-2 text-right font-bold text-slate-900 font-mono whitespace-nowrap">
+          <td class="py-2.5 px-2 text-right font-bold ${isUndef ? 'text-rose-600' : 'text-slate-900'} font-mono whitespace-nowrap">
             ¥${Math.round(rowCost).toLocaleString()}
           </td>
           <td class="py-2.5 px-2 text-center">
@@ -946,19 +991,68 @@
     // 未登録食材の直接打ち込みフォーム開閉
     function toggleDirectInlineForm() {
       document.getElementById('direct-inline-form').classList.toggle('hidden');
+      updateSimilarSuggestions(document.getElementById('inline-ing-name').value);
     }
 
-    // 未登録食材を直接打ち込んで追加（食材DBへ自動登録し、以降のDB修正がレシピにも自動連動）
+    // 既存の食材データベースから似た名前を検索してサジェスト表示
+    function updateSimilarSuggestions(keyword) {
+      const box = document.getElementById('similar-suggestion-box');
+      const btnWrap = document.getElementById('similar-suggestion-buttons');
+      const q = (keyword || '').trim().toLowerCase();
+
+      if (!q) {
+        box.classList.add('hidden');
+        return;
+      }
+
+      const matches = ingredientsMaster.filter(m =>
+        m.name.toLowerCase().includes(q) || q.includes(m.name.toLowerCase().slice(0, 2))
+      ).slice(0, 4);
+
+      if (matches.length === 0) {
+        box.classList.add('hidden');
+        return;
+      }
+
+      btnWrap.innerHTML = '';
+      matches.forEach(m => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'text-[11px] bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold px-2.5 py-1 rounded-md border border-amber-300 transition';
+        btn.textContent = `これを使う: ${m.name} (¥${getEffectiveUnitCost(m, m.yieldRate).toFixed(2)}/${getUnitLabel(m)})`;
+        btn.onclick = () => selectSuggestedIngredient(m.id);
+        btnWrap.appendChild(btn);
+      });
+      box.classList.remove('hidden');
+    }
+
+    function selectSuggestedIngredient(ingId) {
+      const ing = ingredientsMaster.find(m => m.id === ingId);
+      if (!ing) return;
+      const usedVal = Math.max(0, Number(document.getElementById('inline-ing-used').value) || 50);
+      currentRecipe.items.push({
+        ingId: ing.id,
+        usedGrams: usedVal,
+        customYield: ing.yieldRate
+      });
+      document.getElementById('inline-ing-name').value = '';
+      document.getElementById('similar-suggestion-box').classList.add('hidden');
+      renderRecipeTable();
+    }
+
+    // 未登録食材を直接打ち込んで追加（規格容量・仕入価格が未入力でも追加でき、¥0扱いになる）
     function addDirectInlineIngredient() {
       const name = document.getElementById('inline-ing-name').value.trim();
-      const pkg = Number(document.getElementById('inline-ing-pkg').value);
+      const rawPkg = document.getElementById('inline-ing-pkg').value;
+      const pkg = rawPkg === '' ? 0 : Math.max(0, Number(rawPkg) || 0);
       const unitInput = document.getElementById('inline-ing-unit').value.trim();
       const unit = unitInput.length > 0 ? unitInput : 'g';
-      const price = Number(document.getElementById('inline-ing-price').value);
+      const rawPrice = document.getElementById('inline-ing-price').value;
+      const price = rawPrice === '' ? 0 : Math.max(0, Number(rawPrice) || 0);
       const usedGrams = Math.max(0, Number(document.getElementById('inline-ing-used').value) || 0);
 
-      if (!name || !pkg || !price) {
-        alert('食材名・規格容量・仕入価格(円)を入力してください。');
+      if (!name) {
+        alert('食材名を入力してください。');
         return;
       }
 
@@ -984,6 +1078,7 @@
       document.getElementById('inline-ing-pkg').value = '';
       document.getElementById('inline-ing-price').value = '';
       document.getElementById('inline-ing-used').value = '50';
+      document.getElementById('similar-suggestion-box').classList.add('hidden');
 
       saveToStorage();
       renderMasterDatabase();
@@ -994,9 +1089,12 @@
 
     function recalculateRecipe() {
       let totalCost = 0;
+      let hasUndef = false;
+
       currentRecipe.items.forEach(item => {
         const ing = ingredientsMaster.find(m => m.id === item.ingId);
         if (!ing) return;
+        if (isIngredientCostUndefined(ing)) hasUndef = true;
         const yieldVal = item.customYield !== undefined ? item.customYield : ing.yieldRate;
         totalCost += getEffectiveUnitCost(ing, yieldVal) * item.usedGrams;
       });
@@ -1015,15 +1113,27 @@
       document.getElementById('cost-rate').textContent = costRate.toFixed(1);
       document.getElementById('gross-profit').textContent = Math.round(grossProfit).toLocaleString();
 
+      // 仮計算表示の切り替え
+      document.getElementById('editor-provisional-badge').classList.toggle('hidden', !hasUndef);
+      document.getElementById('provisional-rate-tag').classList.toggle('hidden', !hasUndef);
+      const modeNote = document.getElementById('calc-mode-note');
+      if (hasUndef) {
+        modeNote.textContent = '単価未定（¥0）を含むため「仮計算」表示中';
+        modeNote.className = 'text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded';
+      } else {
+        modeNote.textContent = '確定単価ベースで計算中';
+        modeNote.className = 'text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded';
+      }
+
       const badge = document.getElementById('cost-rate-badge');
       if (costRate <= 30) {
-        badge.textContent = '優秀 (〜30%)';
+        badge.textContent = hasUndef ? '仮：優秀 (〜30%)' : '優秀 (〜30%)';
         badge.className = 'text-xs font-bold px-2 py-1 rounded bg-emerald-100 text-emerald-800';
       } else if (costRate <= 35) {
-        badge.textContent = '標準 (30〜35%)';
+        badge.textContent = hasUndef ? '仮：標準 (30〜35%)' : '標準 (30〜35%)';
         badge.className = 'text-xs font-bold px-2 py-1 rounded bg-amber-100 text-amber-800';
       } else {
-        badge.textContent = '原価高 (35%超)';
+        badge.textContent = hasUndef ? '仮：原価高 (35%超)' : '原価高 (35%超)';
         badge.className = 'text-xs font-bold px-2 py-1 rounded bg-rose-100 text-rose-800';
       }
     }
@@ -1261,10 +1371,13 @@ ${masterListText}
       select.innerHTML = '';
       ingredientsMaster.forEach(ing => {
         const unit = getUnitLabel(ing);
+        const isUndef = isIngredientCostUndefined(ing);
         const eff = getEffectiveUnitCost(ing, ing.yieldRate);
         const opt = document.createElement('option');
         opt.value = ing.id;
-        opt.textContent = `[${ing.category}] ${ing.name} (実質 ¥${eff.toFixed(2)}/${unit}・歩留${ing.yieldRate}%)`;
+        opt.textContent = isUndef
+          ? `[${ing.category}] ${ing.name} (単価未定 ¥0/${unit})`
+          : `[${ing.category}] ${ing.name} (実質 ¥${eff.toFixed(2)}/${unit}・歩留${ing.yieldRate}%)`;
         select.appendChild(opt);
       });
     }
@@ -1300,6 +1413,7 @@ ${masterListText}
         items.forEach(ing => {
           const idx = ingredientsMaster.findIndex(m => m.id === ing.id);
           const unit = getUnitLabel(ing);
+          const isUndef = isIngredientCostUndefined(ing);
           const effCost = getEffectiveUnitCost(ing, ing.yieldRate);
 
           const catOptions = categoryList.map(c =>
@@ -1326,7 +1440,7 @@ ${masterListText}
               </td>
               <td class="py-2.5 px-3 text-right whitespace-nowrap w-44">
                 <div class="inline-flex items-center justify-end border border-slate-200 rounded px-2 py-1 bg-white whitespace-nowrap focus-within:border-amber-500">
-                  <input type="number" value="${ing.packageGrams}" min="0.01" step="any"
+                  <input type="number" value="${ing.packageGrams || ''}" placeholder="未入力" min="0" step="any"
                     onchange="updateMasterField(${idx}, 'packageGrams', this.value)"
                     class="w-20 text-right font-mono focus:outline-none">
                   <input type="text" list="unit-options" value="${unit}"
@@ -1338,7 +1452,7 @@ ${masterListText}
               <td class="py-2.5 px-3 text-right whitespace-nowrap w-36">
                 <div class="inline-flex items-center justify-end border border-slate-200 rounded px-2 py-1 bg-white whitespace-nowrap focus-within:border-amber-500">
                   <span class="text-slate-500 font-mono mr-1">¥</span>
-                  <input type="number" value="${ing.packagePrice}" min="1"
+                  <input type="number" value="${ing.packagePrice || ''}" placeholder="未入力" min="0"
                     onchange="updateMasterField(${idx}, 'packagePrice', this.value)"
                     class="w-20 text-right font-mono focus:outline-none">
                 </div>
@@ -1351,8 +1465,8 @@ ${masterListText}
                   <span class="text-slate-500 ml-1">%</span>
                 </div>
               </td>
-              <td class="py-2.5 px-3 text-right font-mono font-bold text-amber-700 whitespace-nowrap w-32 text-sm">
-                ¥${effCost.toFixed(2)}<span class="text-xs text-slate-500 font-normal">/${unit}</span>
+              <td class="py-2.5 px-3 text-right font-mono font-bold ${isUndef ? 'text-rose-600' : 'text-amber-700'} whitespace-nowrap w-36 text-sm">
+                ${isUndef ? '未定 (¥0)' : `¥${effCost.toFixed(2)}<span class="text-xs text-slate-500 font-normal">/${unit}</span>`}
               </td>
               <td class="py-2.5 px-3 text-center whitespace-nowrap w-14">
                 <button onclick="deleteMasterIngredient('${ing.id}')" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition" title="この食材をワンクリックで削除">
@@ -1400,10 +1514,11 @@ ${masterListText}
       renderSavedRecipes();
     }
 
-    // 食材DBの修正（規格容量・仕入価格・歩留まり・単位など）をレシピ表＆保存済みレシピ帳にリアルタイム連動
     function updateMasterField(idx, field, value) {
-      if (['packageGrams', 'packagePrice', 'yieldRate'].includes(field)) {
-        ingredientsMaster[idx][field] = Math.max(0.01, Number(value) || 1);
+      if (['packageGrams', 'packagePrice'].includes(field)) {
+        ingredientsMaster[idx][field] = value === '' ? 0 : Math.max(0, Number(value) || 0);
+      } else if (field === 'yieldRate') {
+        ingredientsMaster[idx][field] = Math.max(1, Math.min(100, Number(value) || 100));
       } else if (field === 'unit') {
         const cleanUnit = (value || '').trim();
         ingredientsMaster[idx].unit = cleanUnit.length > 0 ? cleanUnit : 'g';
@@ -1421,13 +1536,15 @@ ${masterListText}
       const name = document.getElementById('new-ing-name').value.trim();
       const category = document.getElementById('new-ing-cat').value;
       const supplier = document.getElementById('new-ing-sup').value.trim() || '一般仕入先';
-      const pkg = Number(document.getElementById('new-ing-pkg').value);
+      const rawPkg = document.getElementById('new-ing-pkg').value;
+      const pkg = rawPkg === '' ? 0 : Math.max(0, Number(rawPkg) || 0);
       const unitInput = document.getElementById('new-ing-unit').value.trim();
       const unit = unitInput.length > 0 ? unitInput : 'g';
-      const price = Number(document.getElementById('new-ing-price').value);
+      const rawPrice = document.getElementById('new-ing-price').value;
+      const price = rawPrice === '' ? 0 : Math.max(0, Number(rawPrice) || 0);
 
-      if (!name || !pkg || !price) {
-        alert('食材名・規格容量・仕入価格(円)を入力してください。');
+      if (!name) {
+        alert('食材名を入力してください。');
         return;
       }
 
@@ -1459,7 +1576,6 @@ ${masterListText}
 商品コード: 510029  カマンベールチーズ ホール 1pc  680円`;
     }
 
-    // 取引ページ写真の選択・自動軽量化
     async function handleSupplierPhotoUpload(event) {
       const file = event.target.files && event.target.files[0];
       if (!file) return;
@@ -1489,9 +1605,9 @@ ${masterListText}
           name: item.name || '抽出食材',
           category: categoryList.includes(item.category) ? item.category : '野菜・果実',
           supplier: item.supplier || defaultSupplier,
-          packageGrams: Math.max(0.01, Number(item.packageGrams) || 1000),
+          packageGrams: Math.max(0, Number(item.packageGrams) || 0),
           unit: (item.unit || 'g').trim() || 'g',
-          packagePrice: Math.max(1, Number(item.packagePrice) || 500),
+          packagePrice: Math.max(0, Number(item.packagePrice) || 0),
           yieldRate: Math.max(1, Math.min(100, Number(item.yieldRate) || 100))
         });
         count++;
@@ -1502,7 +1618,6 @@ ${masterListText}
       return count;
     }
 
-    // 卸サイトテキスト／写真からの一括抽出登録
     async function parseSupplierText() {
       const raw = document.getElementById('supplier-raw-text').value.trim();
       const hasPhoto = Boolean(supplierPhotoDataUrl);
@@ -1560,7 +1675,6 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
         }
       }
 
-      // API未設定時：テキストがあれば正規表現で抽出、写真のみの場合はサンプル明細を抽出デモとして追加
       if (!raw && hasPhoto) {
         const sampleFromPhoto = [
           { name: '国産 豚ローススライス', category: '肉類', supplier: '取引写真抽出', packageGrams: 1000, unit: 'g', packagePrice: 1680, yieldRate: 95 },
@@ -1639,7 +1753,7 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
       }
     }
 
-    // ====== 7. 保存済みレシピ帳 ======
+    // ====== 7. 保存済みレシピ帳（単価未入力件数区別・仮計算バッジ表示） ======
     function setSavedFilter(filter) {
       savedFilterMode = filter;
       ['all', 'menu', 'prep'].forEach(f => {
@@ -1669,6 +1783,7 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
 
       const menuRecipes = savedRecipes.filter(r => r.type === 'menu' && r.sellingPrice > 0);
       const prepRecipes = savedRecipes.filter(r => r.type === 'prep');
+      const provisionalRecipesCount = savedRecipes.filter(r => hasUndefinedCostInRecipe(r)).length;
 
       let sumCost = 0;
       let sumPrice = 0;
@@ -1689,6 +1804,7 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
       document.getElementById('book-prep-count').textContent = prepRecipes.length;
       document.getElementById('book-sum-cost').textContent = sumCost.toLocaleString();
       document.getElementById('book-sum-price').textContent = sumPrice.toLocaleString();
+      document.getElementById('book-provisional-count').textContent = provisionalRecipesCount;
 
       const grid = document.getElementById('saved-recipes-grid');
       grid.innerHTML = '';
@@ -1701,19 +1817,23 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
       filtered.forEach(rec => {
         const isPrep = rec.type === 'prep';
         const fUnit = rec.finishedUnit || 'g';
+        const isProvisional = hasUndefinedCostInRecipe(rec);
         const costRateNum = (!isPrep && rec.sellingPrice > 0) ? ((rec.totalCost / rec.sellingPrice) * 100) : 0;
 
         const card = document.createElement('div');
-        card.className = 'border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-md hover:border-amber-400 transition cursor-pointer flex flex-col justify-between';
+        card.className = `border ${isProvisional ? 'border-rose-300' : 'border-slate-200'} rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-md hover:border-amber-400 transition cursor-pointer flex flex-col justify-between`;
         card.onclick = () => openRecipeModal(rec.id);
 
         card.innerHTML = `
           <div>
             <div class="h-36 bg-slate-100 relative overflow-hidden">
               <img src="${rec.photoUrl}" alt="${rec.name}" class="w-full h-full object-cover">
-              <span class="absolute top-2 left-2 text-[11px] font-bold px-2.5 py-0.5 rounded shadow ${isPrep ? 'bg-indigo-600 text-white' : 'bg-amber-500 text-slate-900'}">
-                ${isPrep ? '仕込みレシピ' : 'グランドメニュー'}
-              </span>
+              <div class="absolute top-2 left-2 flex flex-wrap gap-1.5">
+                <span class="text-[11px] font-bold px-2.5 py-0.5 rounded shadow ${isPrep ? 'bg-indigo-600 text-white' : 'bg-amber-500 text-slate-900'}">
+                  ${isPrep ? '仕込みレシピ' : 'グランドメニュー'}
+                </span>
+                ${isProvisional ? `<span class="text-[11px] font-bold px-2 py-0.5 rounded shadow bg-rose-600 text-white"><i class="fa-solid fa-triangle-exclamation mr-1"></i>単価未定あり（仮）</span>` : ''}
+              </div>
             </div>
             <div class="p-4">
               <h3 class="font-bold text-base text-slate-800">${rec.name}</h3>
@@ -1723,11 +1843,11 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
 
           <div class="px-4 pb-4 pt-2 border-t border-slate-100 flex justify-between items-center">
             <div>
-              <span class="text-[10px] text-slate-400 block">総原価 (1${fUnit}単価)</span>
-              <span class="font-bold text-sm text-slate-900">¥${rec.totalCost.toLocaleString()} <span class="text-xs font-normal text-slate-500">(¥${rec.costPerGram.toFixed(2)}/${fUnit})</span></span>
+              <span class="text-[10px] text-slate-400 block">${isProvisional ? '仮総原価 (1' + fUnit + '単価)' : '総原価 (1' + fUnit + '単価)'}</span>
+              <span class="font-bold text-sm ${isProvisional ? 'text-rose-700' : 'text-slate-900'}">¥${rec.totalCost.toLocaleString()} <span class="text-xs font-normal text-slate-500">(¥${rec.costPerGram.toFixed(2)}/${fUnit})</span></span>
             </div>
             <div class="flex items-center space-x-2">
-              ${!isPrep ? `<span class="text-xs font-bold px-2 py-1 rounded bg-amber-50 text-amber-800 border border-amber-200">原価率 ${costRateNum.toFixed(1)}%</span>` : ''}
+              ${!isPrep ? `<span class="text-xs font-bold px-2 py-1 rounded ${isProvisional ? 'bg-rose-50 text-rose-800 border border-rose-200' : 'bg-amber-50 text-amber-800 border border-amber-200'}">${isProvisional ? '仮原価率' : '原価率'} ${costRateNum.toFixed(1)}%</span>` : ''}
               <button onclick="event.stopPropagation(); triggerDirectPrint('${rec.id}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-bold transition" title="A4・1ページ印刷">
                 <i class="fa-solid fa-print"></i>
               </button>
@@ -1745,6 +1865,7 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
 
       const isPrep = rec.type === 'prep';
       const fUnit = rec.finishedUnit || 'g';
+      const isProvisional = hasUndefinedCostInRecipe(rec);
       const costRate = (!isPrep && rec.sellingPrice > 0) ? ((rec.totalCost / rec.sellingPrice) * 100).toFixed(1) + '%' : '-';
       const grossProfit = (!isPrep && rec.sellingPrice > 0) ? '¥' + (rec.sellingPrice - rec.totalCost).toLocaleString() : '-';
 
@@ -1754,24 +1875,26 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
       badge.className = isPrep
         ? 'text-xs font-bold px-2.5 py-0.5 rounded bg-indigo-500 text-white'
         : 'text-xs font-bold px-2.5 py-0.5 rounded bg-amber-500 text-slate-900';
+      document.getElementById('modal-provisional-badge').classList.toggle('hidden', !isProvisional);
 
       let rowsHtml = '';
       rec.items.forEach(item => {
         const ing = ingredientsMaster.find(m => m.id === item.ingId);
         if (!ing) return;
         const unit = getUnitLabel(ing);
+        const isUndef = isIngredientCostUndefined(ing);
         const yieldVal = item.customYield !== undefined ? item.customYield : ing.yieldRate;
         const effCost = getEffectiveUnitCost(ing, yieldVal);
         const rowCost = Math.round(effCost * item.usedGrams);
 
         rowsHtml += `
           <tr class="border-b border-slate-200 text-xs">
-            <td class="py-2 px-2 font-bold text-slate-800">${ing.name}</td>
+            <td class="py-2 px-2 font-bold text-slate-800">${ing.name} ${isUndef ? '<span class="text-[10px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded ml-1">単価未定</span>' : ''}</td>
             <td class="py-2 px-2 text-slate-500">${ing.category}</td>
             <td class="py-2 px-2 text-center">${yieldVal}%</td>
-            <td class="py-2 px-2 text-right font-mono">¥${effCost.toFixed(2)}/${unit}</td>
+            <td class="py-2 px-2 text-right font-mono ${isUndef ? 'text-rose-600 font-bold' : ''}">¥${effCost.toFixed(2)}/${unit}</td>
             <td class="py-2 px-2 text-right font-bold font-mono">${item.usedGrams}${unit}</td>
-            <td class="py-2 px-2 text-right font-bold font-mono text-slate-900">¥${rowCost.toLocaleString()}</td>
+            <td class="py-2 px-2 text-right font-bold font-mono ${isUndef ? 'text-rose-600' : 'text-slate-900'}">¥${rowCost.toLocaleString()}</td>
           </tr>
         `;
       });
@@ -1789,11 +1912,11 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
             <img src="${rec.photoUrl}" alt="${rec.name}" class="w-full h-48 object-cover rounded-xl shadow-sm border border-slate-200">
             <div class="mt-4 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
               <div class="flex justify-between"><span class="text-slate-500">仕上がり量:</span><span class="font-bold">${rec.finishedWeight}${fUnit}</span></div>
-              <div class="flex justify-between"><span class="text-slate-500">レシピ総原価:</span><span class="font-bold text-base text-slate-900">¥${rec.totalCost.toLocaleString()}</span></div>
+              <div class="flex justify-between"><span class="text-slate-500">${isProvisional ? '仮レシピ総原価:' : 'レシピ総原価:'}</span><span class="font-bold text-base ${isProvisional ? 'text-rose-700' : 'text-slate-900'}">¥${rec.totalCost.toLocaleString()}</span></div>
               <div class="flex justify-between"><span class="text-slate-500">1${fUnit}あたり原価:</span><span class="font-bold">¥${rec.costPerGram.toFixed(2)}/${fUnit}</span></div>
               ${!isPrep ? `
                 <div class="flex justify-between pt-2 border-t border-slate-200"><span class="text-slate-500">税抜販売価格:</span><span class="font-bold">¥${rec.sellingPrice.toLocaleString()}</span></div>
-                <div class="flex justify-between"><span class="text-slate-500">原価率:</span><span class="font-bold text-amber-600 text-sm">${costRate}</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">${isProvisional ? '原価率 (仮計算):' : '原価率:'}</span><span class="font-bold ${isProvisional ? 'text-rose-700' : 'text-amber-600'} text-sm">${costRate}</span></div>
                 <div class="flex justify-between"><span class="text-slate-500">粗利額:</span><span class="font-bold text-emerald-700">${grossProfit}</span></div>
               ` : ''}
             </div>
@@ -1975,6 +2098,7 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
 
       const isPrep = rec.type === 'prep';
       const fUnit = rec.finishedUnit || 'g';
+      const isProvisional = hasUndefinedCostInRecipe(rec);
       const costRate = (!isPrep && rec.sellingPrice > 0) ? ((rec.totalCost / rec.sellingPrice) * 100).toFixed(1) + '%' : '-';
 
       let rowsHtml = '';
@@ -1982,13 +2106,14 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
         const ing = ingredientsMaster.find(m => m.id === item.ingId);
         if (!ing) return;
         const unit = getUnitLabel(ing);
+        const isUndef = isIngredientCostUndefined(ing);
         const yieldVal = item.customYield !== undefined ? item.customYield : ing.yieldRate;
         const effCost = getEffectiveUnitCost(ing, yieldVal);
         const rowCost = Math.round(effCost * item.usedGrams);
 
         rowsHtml += `
           <tr class="border-b border-slate-300 text-xs">
-            <td class="py-1.5 px-2 font-bold">${ing.name}</td>
+            <td class="py-1.5 px-2 font-bold">${ing.name}${isUndef ? ' [単価未定]' : ''}</td>
             <td class="py-1.5 px-2">${ing.category}</td>
             <td class="py-1.5 px-2 text-center">${yieldVal}%</td>
             <td class="py-1.5 px-2 text-right">¥${effCost.toFixed(2)}/${unit}</td>
@@ -2010,13 +2135,13 @@ ${raw ? `\n対象テキスト:\n${raw}` : ''}`;
         <div class="border-2 border-slate-800 p-5 space-y-4">
           <div class="flex justify-between items-end border-b-2 border-slate-800 pb-3">
             <div>
-              <span class="text-xs font-bold border border-slate-800 px-2 py-0.5">${isPrep ? '仕込みレシピ票' : 'グランドメニュー標準レシピ票'}</span>
+              <span class="text-xs font-bold border border-slate-800 px-2 py-0.5">${isPrep ? '仕込みレシピ票' : 'グランドメニュー標準レシピ票'}${isProvisional ? ' ※単価未定あり（仮計算）' : ''}</span>
               <h1 class="text-2xl font-bold mt-1">${rec.name}</h1>
             </div>
             <div class="text-right text-xs">
               <p>仕上がり規定量: <strong>${rec.finishedWeight}${fUnit}</strong></p>
-              <p>総原価: <strong>¥${rec.totalCost.toLocaleString()}</strong> (¥${rec.costPerGram.toFixed(2)}/${fUnit})</p>
-              ${!isPrep ? `<p>税抜売価: <strong>¥${rec.sellingPrice.toLocaleString()}</strong> / 原価率: <strong>${costRate}</strong></p>` : ''}
+              <p>${isProvisional ? '仮総原価' : '総原価'}: <strong>¥${rec.totalCost.toLocaleString()}</strong> (¥${rec.costPerGram.toFixed(2)}/${fUnit})</p>
+              ${!isPrep ? `<p>税抜売価: <strong>¥${rec.sellingPrice.toLocaleString()}</strong> / ${isProvisional ? '仮原価率' : '原価率'}: <strong>${costRate}</strong></p>` : ''}
             </div>
           </div>
 
