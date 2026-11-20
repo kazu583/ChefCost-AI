@@ -176,6 +176,16 @@
                 </button>
               </div>
             </div>
+
+            <!-- APIキー未設定時の使える機能・使えない機能 注意書き -->
+            <div class="mt-4 bg-slate-50 border border-slate-200 rounded-lg p-3 text-[11px] text-slate-600 space-y-1">
+              <div class="font-bold text-slate-800 flex items-center justify-between">
+                <span><i class="fa-solid fa-circle-info text-amber-500 mr-1"></i>APIキーなしでも全基本機能が使えます</span>
+                <button type="button" onclick="openSettingsModal()" class="text-indigo-600 hover:underline font-bold">API設定</button>
+              </div>
+              <p><strong>使える機能：</strong>食材DBの登録・編集・削除、取引テキストのルール抽出、写真軽量化、原価・原価率計算、保存、A4印刷、バックアップ</p>
+              <p><strong>APIキーが必要：</strong>料理写真からのAI自動抽出、取引画面・納品書写真や複雑明細のAI解析</p>
+            </div>
           </div>
 
           <!-- 調理手順・盛り付けポイント（番号付き箇条書き編集） -->
@@ -603,6 +613,15 @@
           <p class="text-xs text-slate-500 leading-relaxed">
             APIキーをそのまま保存せず、あなたが決めた<strong>暗証番号（PIN）</strong>を使ってAES暗号化してブラウザ内に保存します。ブラウザを閉じると自動でロックされ、他人にブラウザを覗かれてもキーを読み取られる心配がありません。
           </p>
+
+          <!-- APIキー未設定時に使える機能・使えない機能の要約注意書き -->
+          <div class="bg-white border border-slate-200 rounded-lg p-3 text-xs text-slate-600 space-y-1">
+            <div class="font-bold text-slate-800">
+              <i class="fa-solid fa-circle-info text-indigo-600 mr-1"></i>APIキーを設定しない場合の目安
+            </div>
+            <p><strong>【使える機能】</strong> 食材DBの追加・修正・削除、取引テキストのルール抽出、写真軽量化、原価・原価率・仮計算、保存、A4印刷、JSONバックアップ</p>
+            <p><strong>【APIキーで使える機能】</strong> 料理写真からのAI自動ピックアップ、取引画面・納品書写真や複雑明細のAI解析</p>
+          </div>
 
           <!-- パターンA: 暗号化キーが保存済みで「ロック中」の画面 -->
           <div id="api-locked-panel" class="hidden bg-amber-50 border border-amber-300 rounded-lg p-3.5 space-y-2.5">
@@ -1329,7 +1348,6 @@
       return newUnreg.id;
     }
 
-    // Gemini APIによる料理写真からの食材自動ピックアップ（ロック時はPIN解除画面を案内）
     async function analyzePhotoWithAI() {
       const apiKey = getActiveApiKey();
       if (!apiKey) {
